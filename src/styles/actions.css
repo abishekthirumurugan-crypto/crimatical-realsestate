@@ -1,0 +1,148 @@
+/**
+ * The floating contact rail: WhatsApp, call, enquiry.
+ *
+ * Pinned to the middle of the right edge, and hidden while the film is on
+ * screen — the film is the one full-bleed moment on the site, and three
+ * coloured discs sitting on it would undo that.
+ *
+ * Each button is a pill that is collapsed to a circle. Hovering or focusing
+ * expands it leftward to show its label, so the rail reads as icons at rest and
+ * explains itself on approach.
+ */
+
+.actions {
+  position: fixed;
+  z-index: 26;
+  right: clamp(0.75rem, 1.6vw, 1.25rem);
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  /* translateY(-50%) is doing the centring, so the reveal animates on top of
+     it rather than replacing it. */
+  transform: translateY(-50%) translateX(1.25rem);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 320ms ease,
+    transform 320ms ease;
+}
+
+.actions[data-visible='true'] {
+  transform: translateY(-50%) translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.actions__item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  height: 2.9rem;
+  padding: 0 0.72rem;
+  border-radius: var(--radius-pill);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+  transition:
+    gap 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    padding 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 200ms ease;
+}
+
+.actions__item:hover {
+  filter: brightness(1.08);
+}
+
+.actions__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.45rem;
+  flex: none;
+}
+
+/**
+ * The label is laid out but clipped to zero width, so opening it costs no
+ * reflow of anything outside the rail and the text never wraps mid-transition.
+ */
+.actions__label {
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  opacity: 0;
+  transition:
+    max-width 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 200ms ease;
+}
+
+.actions__item:hover .actions__label,
+.actions__item:focus-visible .actions__label {
+  max-width: 7rem;
+  opacity: 1;
+}
+
+.actions__item:hover,
+.actions__item:focus-visible {
+  gap: 0.55rem;
+  padding-right: 1.05rem;
+}
+
+/* Brand colours, so each control is recognised before it is read. */
+.actions__item--whatsapp {
+  background: #25d366;
+}
+
+.actions__item--call {
+  background: var(--navy);
+}
+
+.actions__item--enquiry {
+  background: var(--primary);
+}
+
+.actions__item:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* On a phone the rail would sit over the content it is meant to support, so it
+   drops to the bottom-right corner and runs as a row of plain circles. */
+@media (max-width: 40rem) {
+  .actions {
+    top: auto;
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    right: 1rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    transform: translateY(1.25rem);
+  }
+
+  .actions[data-visible='true'] {
+    transform: translateY(0);
+  }
+
+  .actions__item {
+    height: 2.75rem;
+    width: 2.75rem;
+    padding: 0;
+    justify-content: center;
+  }
+
+  /* No room to expand, and the icons carry it at this size. */
+  .actions__label {
+    display: none;
+  }
+
+  .actions__item:hover,
+  .actions__item:focus-visible {
+    gap: 0;
+    padding-right: 0;
+  }
+}

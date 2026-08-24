@@ -1,0 +1,180 @@
+/**
+ * Card elevation and edges.
+ *
+ * Loaded last, so it owns `box-shadow` for every card-like surface in one place
+ * rather than having each component invent its own.
+ *
+ * Three ideas, all standard practice in the design systems that do this well:
+ *
+ *  1. **Layered shadows.** Offset and blur roughly double per layer. A single
+ *     shadow reads as a flat grey smear; three thin ones read as light falling
+ *     past an object.
+ *  2. **Negative spread on the later layers**, the way Tailwind's scale does it,
+ *     so the shade stays tucked under the card instead of haloing around it.
+ *  3. **Tinted, not black.** The shadow takes the navy's hue. Neutral black over
+ *     a warm near-white page goes muddy.
+ *
+ * See `--shadow-*` in tokens.css for the values.
+ */
+
+/* ------------------------------------------------------- resting elevation */
+
+.stat,
+.spec-card,
+.tl__card,
+.unit,
+.service,
+.quote,
+.media,
+.figure,
+.value,
+.timeline,
+.person,
+.post-card,
+.entry__nav-link,
+.contact__block,
+.contact__form {
+  box-shadow: var(--shadow-sm);
+}
+
+/* The dashed placeholder is a gap, not a card. */
+.entry__nav-placeholder {
+  box-shadow: none;
+}
+
+/* Big dark surfaces sit higher off the page than the cards do. */
+.panel,
+.contact__sent {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Once the page scrolls under it, the bar needs more than a hairline to read as
+   being in front of the content. */
+.site-header {
+  box-shadow: var(--shadow-xs);
+}
+
+/* --------------------------------------------------------------- the lift
+ *
+ * The raised shadow lives on a pseudo-element whose OPACITY animates, instead
+ * of transitioning `box-shadow` directly.
+ *
+ * Transitioning box-shadow re-rasterises the shadow on every frame, and this
+ * page can have twenty cards on screen at once. Opacity is a compositor
+ * property, so the lift is effectively free — and the two shadows cross-fade
+ * rather than one morphing into the other, which looks better anyway.
+ */
+
+.unit,
+.service,
+.post-card,
+.entry__nav-link {
+  position: relative;
+}
+
+.unit::after,
+.service::after,
+.post-card::after,
+.entry__nav-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transition: opacity 240ms ease;
+  /* The element has no background, and a non-inset box-shadow paints only
+     outside the border box — so this can never cover the card's own content. */
+  pointer-events: none;
+}
+
+.unit:hover::after,
+.service:hover::after,
+.post-card:hover::after,
+.entry__nav-link:hover::after {
+  opacity: 1;
+}
+
+/* The placeholder is not interactive, so it gets no lift. */
+.entry__nav-placeholder::after {
+  content: none;
+}
+
+/* The edge firms up alongside the lift. A card that only gains a shadow on
+   hover still reads as flat at the border. */
+.unit:hover,
+.service:hover,
+.post-card:hover,
+.entry__nav-link:hover {
+  border-color: var(--border-strong);
+}
+
+/* Keyboard users get the lift too — hover is not the only way in. */
+.post-card:focus-visible::after,
+.entry__nav-link:focus-visible::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unit,
+  .service,
+  .post-card,
+  .entry__nav-link {
+    transition: none;
+  }
+}
+
+/* --------------------------------------------------------- controls ------ */
+
+/* Buttons get a resting shade so they read as pressable, and lose it on hover
+   as they rise — the inverse of the cards, which is what a press implies. */
+.button--primary,
+.button--outline {
+  box-shadow: var(--shadow-xs);
+}
+
+.button--primary:hover,
+.button--outline:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.panel .button--outline,
+.site-footer .button--outline,
+.contact__sent .button--outline {
+  box-shadow: none;
+}
+
+/**
+ * Focus ring on form controls: a soft halo outside a firmed-up border, which is
+ * the pattern most component libraries have converged on. It reads as focus
+ * without the jump a 2px outline causes, and the border carries the contrast.
+ */
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* A control that is focused *and* invalid should say so on the border, not by
+   losing the ring. */
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: none;
+}
+
+.filter {
+  box-shadow: var(--shadow-xs);
+}
+
+.filter[data-active='true'] {
+  box-shadow: var(--shadow-sm);
+}
+
+/* The pill tags sit on the page rather than on a card, so they only need the
+   faintest lift to separate. */
+.tag,
+.partner {
+  box-shadow: var(--shadow-xs);
+}

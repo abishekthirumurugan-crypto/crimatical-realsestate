@@ -1,0 +1,979 @@
+/**
+ * Home page sections.
+ *
+ * One repeating unit: a white card, 12px corners, a hairline border, on the
+ * near-white page. Grids use real gaps between separate cards rather than a
+ * background showing through 1px seams — that was the old system, and seams do
+ * not survive rounded corners.
+ */
+
+.section {
+  padding-block: var(--section-y);
+}
+
+.section--tight {
+  padding-block: clamp(1.5rem, 2.5vw, 2.25rem);
+}
+
+/* When the film is collapsed, this is the first thing on the page and has to
+   clear the fixed header itself — the film used to do that by being 500vh. */
+.section[data-first='true'] {
+  padding-top: calc(var(--header-h) + clamp(1.5rem, 3vw, 2.5rem));
+}
+
+/* An alternating band, for sections that need to separate from their
+   neighbours without a rule. */
+.section--band {
+  background: var(--band);
+  border-block: 1px solid var(--border);
+}
+
+.section__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 2.5rem;
+  flex-wrap: wrap;
+  margin-bottom: clamp(1.25rem, 2.2vw, 1.85rem);
+}
+
+.section__heading {
+  max-width: 24ch;
+}
+
+.section__head .tag {
+  margin-bottom: 0.7rem;
+}
+
+.section__intro {
+  max-width: 32rem;
+  color: var(--muted);
+}
+
+.section__more {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border-strong);
+  padding-bottom: 0.2rem;
+  transition: border-color 200ms ease;
+}
+
+.section__more:hover {
+  border-color: var(--primary);
+  color: var(--primary-ink);
+}
+
+/* ----------------------------------------------------------------- media */
+
+.media {
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.media img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+/* ------------------------------------------------------------- stats bar */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+}
+
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.25rem;
+  text-align: center;
+}
+
+.stat__value {
+  font-size: var(--h2);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  color: var(--ink);
+}
+
+.stat__label {
+  margin-top: 0.55rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+.stat__note {
+  margin-top: 0.15rem;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------ split block */
+
+.split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: clamp(1.75rem, 4vw, 3.5rem);
+  align-items: center;
+}
+
+.split--reverse .split__media {
+  order: -1;
+}
+
+.split__body p + p {
+  margin-top: 1rem;
+}
+
+.split__body .tag {
+  margin-bottom: 1rem;
+}
+
+.split__body h2 {
+  margin-bottom: 1.1rem;
+}
+
+.split__list {
+  list-style: none;
+  margin: 1.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.split__list li {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+}
+
+/* A tick marker drawn in CSS rather than an icon font or an SVG request. */
+.split__list li::before {
+  content: '';
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--primary);
+  background-image: linear-gradient(45deg, transparent 46%, #fff 46% 54%, transparent 54%),
+    linear-gradient(-45deg, transparent 46%, #fff 46% 54%, transparent 54%);
+  background-size: 42% 42%, 42% 42%;
+  background-position: 32% 62%, 56% 46%;
+  background-repeat: no-repeat;
+  margin-top: 0.1rem;
+}
+
+.split__list strong {
+  display: block;
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.split__list span {
+  font-size: var(--text-sm);
+}
+
+/* --------------------------------------------------------- specification
+ *
+ * Grouped cards rather than a row of loose figures: an icon and a heading, then
+ * the rows that belong under it. Six numbers side by side read as trivia; four
+ * headed groups read as a document.
+ */
+
+.spec {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr));
+  gap: 1.25rem;
+}
+
+.spec-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.35rem 1.4rem 1.4rem;
+}
+
+.spec-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.95rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.spec-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--primary-tint);
+  color: var(--primary-ink);
+}
+
+.spec-card__title {
+  font-size: var(--h4);
+  line-height: 1.2;
+}
+
+.spec-card__summary {
+  margin-top: 0.2rem;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.spec-card__rows {
+  margin: 0;
+}
+
+.spec-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.7rem;
+}
+
+.spec-row + .spec-row {
+  border-top: 1px solid var(--border);
+}
+
+.spec-row__label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* A marker, kept to a dot: the reference sets a file icon on each row, but
+   these rows are figures rather than links, and an icon that means nothing is
+   noise at this size. */
+.spec-row__label::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--primary);
+  transform: translateY(-0.15em);
+}
+
+.spec-row__value {
+  margin: 0;
+  font-size: var(--text);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.spec-row__value small {
+  font-size: 0.72em;
+  font-weight: var(--weight-regular);
+  color: var(--muted);
+  margin-left: 0.2em;
+}
+
+/* -------------------------------------------------------------- build log
+ *
+ * A timeline, not a table.
+ *
+ * The rows carried date, stage, note and status; what they could not carry was
+ * the shape of the programme — that the gaps between stages are five and six
+ * months, that five are behind us and one is not. A spine says that at a
+ * glance: solid where the work is done, dashed where it is still owed.
+ *
+ * Each stage also gets its own frame from the film, cut at that stage's beat,
+ * and the number it is measured by.
+ */
+
+.timeline-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tl {
+  display: grid;
+  grid-template-columns: 7.5rem 1.75rem minmax(0, 1fr);
+  gap: 0 1.1rem;
+}
+
+/* --- the date column --- */
+
+.tl__when {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding-top: 1.4rem;
+  text-align: right;
+}
+
+.tl__stage {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.tl__date {
+  font-size: var(--text);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Months since the previous stage — the programme's rhythm, made visible. */
+.tl__gap {
+  font-size: var(--text-xs);
+  color: var(--primary-ink);
+}
+
+/* --- the spine --- */
+
+.tl__spine {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.tl__spine::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--primary);
+}
+
+/* The line runs between dots, not past the ends of the programme. */
+.tl:first-child .tl__spine::before {
+  top: 1.75rem;
+}
+
+.tl:last-child .tl__spine::before {
+  bottom: calc(100% - 1.75rem);
+}
+
+/* What has not happened yet is drawn as owed, not as done. */
+.tl[data-status='scheduled'] .tl__spine::before {
+  background: none;
+  border-left: 2px dashed var(--border-strong);
+}
+
+.tl__dot {
+  position: relative;
+  margin-top: 1.45rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--primary);
+  /* Knocks a hole in the line behind it rather than sitting on top of it. */
+  box-shadow: 0 0 0 4px var(--bg);
+}
+
+.tl[data-status='scheduled'] .tl__dot {
+  background: var(--surface);
+  border: 2px solid var(--primary);
+}
+
+/* --- the card --- */
+
+.tl__card {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) auto;
+  gap: 1.15rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.tl__media {
+  overflow: hidden;
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--bg);
+}
+
+.tl__media img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.tl__name {
+  font-size: var(--h4);
+  line-height: 1.2;
+}
+
+.tl__note {
+  margin-top: 0.25rem;
+  font-size: var(--text-sm);
+}
+
+.tl__metric {
+  margin-top: 0.55rem;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--primary-ink);
+}
+
+.tl__badge {
+  align-self: center;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.8rem;
+  margin-right: 0.4rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.tl__badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.tl[data-status='scheduled'] .tl__badge {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.tl[data-status='scheduled'] .tl__badge::before {
+  background: #fff;
+}
+
+@media (max-width: 62rem) {
+  .tl__card {
+    grid-template-columns: 8.5rem minmax(0, 1fr) auto;
+  }
+}
+
+/* Below this the spine has nowhere to live, so the stage heading moves into
+   the flow above its card and the image goes full width. */
+@media (max-width: 52rem) {
+  .tl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .tl__spine {
+    display: none;
+  }
+
+  .tl__when {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.7rem;
+    padding-top: 0;
+    margin-bottom: 0.5rem;
+    text-align: left;
+  }
+
+  .tl__card {
+    grid-template-columns: minmax(0, 1fr);
+    margin-bottom: 1.5rem;
+  }
+
+  .tl__badge {
+    justify-self: start;
+    margin-right: 0;
+  }
+}
+
+/* ------------------------------------------------------------- residences
+ *
+ * A schematic plan, then the figures a buyer compares on: area, beds, baths,
+ * aspect, floors, guide price. The card was four lines of text; the plan is
+ * what lets the three types be told apart at a glance.
+ */
+
+.units {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.25rem;
+}
+
+.unit {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.8rem 1.15rem;
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease;
+}
+
+.unit:hover {
+  transform: translateY(-2px);
+}
+
+/* --- the plan --- */
+
+.unit__plan {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 10;
+  padding: 1.3rem 1.5rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--bg);
+  /* The plan inherits this as its stroke. */
+  color: var(--navy);
+}
+
+.unit__left {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--muted);
+}
+
+/* Two or fewer left is the fact worth shouting about. */
+.unit__left[data-scarce='true'] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* --- heading --- */
+
+.unit__head {
+  padding: 1.1rem 0.55rem 0.95rem;
+}
+
+.unit__type {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.unit__headline {
+  margin-top: 0.1rem;
+  font-size: var(--h4);
+  line-height: 1.2;
+}
+
+/* --- the figures --- */
+
+.unit__specs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  border-block: 1px solid var(--border);
+}
+
+.unit__spec {
+  padding: 0.8rem 0.3rem;
+  text-align: center;
+}
+
+.unit__spec + .unit__spec {
+  border-left: 1px solid var(--border);
+}
+
+.unit__spec dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  line-height: 1.1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.unit__spec dd small {
+  font-size: 0.62em;
+  font-weight: var(--weight-regular);
+  color: var(--muted);
+  margin-left: 0.12em;
+}
+
+.unit__spec dt {
+  margin-top: 0.2rem;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* --- aspect and floors --- */
+
+.unit__meta {
+  margin: 0;
+  padding: 1rem 0.55rem 0;
+  display: grid;
+  gap: 0.5rem;
+  font-size: var(--text-sm);
+}
+
+.unit__meta > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.unit__meta dt {
+  color: var(--muted);
+  flex: none;
+}
+
+.unit__meta dd {
+  margin: 0;
+  text-align: right;
+  color: var(--ink);
+}
+
+/* --- price and CTA --- */
+
+.unit__foot {
+  margin-top: auto;
+  padding: 1.05rem 0.55rem 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.unit__price span {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.unit__price strong {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: var(--h4);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.unit__cta {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--primary-ink);
+  text-decoration: none;
+  white-space: nowrap;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 0.15rem;
+  transition: border-color 200ms ease;
+}
+
+.unit__cta:hover {
+  border-color: var(--primary);
+}
+
+/* --------------------------------------------------------------- services
+ *
+ * Icon and index in the header, then the claim, then what it actually covers.
+ * The list is the upgrade: a paragraph says "fit-out", the chips say kitchens,
+ * joinery, flooring, finishes — which is the part a reader is scanning for.
+ */
+
+.services {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.25rem;
+}
+
+.service {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.35rem 1.3rem 1.3rem;
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease;
+}
+
+.service:hover {
+  transform: translateY(-2px);
+}
+
+.service__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.05rem;
+}
+
+/* Rounded square, where the specification cards use circles — same family,
+   different section, so the two are not mistaken for each other. */
+.service__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint);
+  color: var(--primary-ink);
+}
+
+.service__num {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.service__title {
+  font-size: var(--h4);
+  line-height: 1.2;
+}
+
+.service__body {
+  margin-top: 0.6rem;
+  font-size: var(--text-sm);
+  line-height: 1.65;
+}
+
+.service__covers {
+  list-style: none;
+  margin: auto 0 0;
+  padding: 1.05rem 0 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.service__covers li {
+  padding: 0.28rem 0.62rem;
+  border-radius: var(--radius-pill);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* ----------------------------------------------------------- testimonials */
+
+.testimonials {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.25rem;
+}
+
+.quote {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.45rem 1.3rem;
+}
+
+/* Decorative. Sits top-right, where the meta row leaves space for it. */
+.quote__mark {
+  position: absolute;
+  top: 0.3rem;
+  right: 1.05rem;
+  font-size: 4.25rem;
+  line-height: 1;
+  font-weight: var(--weight-medium);
+  color: var(--primary-tint);
+  pointer-events: none;
+  user-select: none;
+}
+
+.quote__top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.quote__stars {
+  color: var(--primary);
+  font-size: var(--text-sm);
+  letter-spacing: 0.12em;
+}
+
+.quote__date {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.quote__body {
+  margin: 0.9rem 0 0;
+  font-size: var(--text-lg);
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.quote__foot {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.75rem;
+}
+
+/* Initials rather than a stock photograph: the people are invented, and a fake
+   face is a worse placeholder than an honest monogram. */
+.quote__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  flex: none;
+}
+
+.quote__who {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+
+.quote__name {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+}
+
+.quote__role {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* Says when the review was collected is trustworthy, not that the person is. */
+.quote__verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--ok-tint);
+  color: var(--ok);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.quote__verified::before {
+  content: '✓';
+  font-size: 0.9em;
+}
+
+/* --------------------------------------------------------------- partners */
+
+.partners {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1rem;
+}
+
+.partner {
+  padding: 0.7rem 1.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------- CTA panel */
+
+.panel {
+  background: var(--navy);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.75rem, 3.2vw, 2.75rem);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.panel h2 {
+  color: #fff;
+  max-width: 18ch;
+}
+
+.panel p {
+  margin-top: 1rem;
+  max-width: var(--measure);
+}
+
+.panel__actions {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* ---------------------------------------------------------------- reveals */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(1rem);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.reveal[data-shown='true'] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.partners__label {
+  text-align: center;
+  margin-bottom: 1.25rem;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}

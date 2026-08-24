@@ -1,0 +1,146 @@
+/**
+ * Design tokens.
+ *
+ * The system follows the Struxel reference: a near-white page, white cards with
+ * 12px corners and a hairline border, Poppins throughout, and headings set in
+ * Title Case at medium weight with no tracking and no uppercase. Body copy runs
+ * grey against black headings.
+ *
+ * The brand navy and gold are kept from logo.png, but demoted to what they are
+ * good at on a light page — the dark surfaces (header, footer, CTA panels) and
+ * small accents on them. On white, the accent is the navy, because the gold
+ * cannot carry contrast there.
+ */
+
+:root {
+  /* --- ground ---------------------------------------------------------- */
+
+  /** Page. Near-white, warm-neutral. */
+  --bg: #f6f6f6;
+  /** Cards, panels, anything raised off the page. */
+  --surface: #ffffff;
+  /**
+   * Alternating section band. A step *darker* than the page, not white — a
+   * white band puts white cards on white and they survive only as outlines.
+   */
+  --band: #ecedef;
+
+  /** Headings and primary text. */
+  --ink: #0a0a0a;
+  /** Body copy, captions, anything secondary. */
+  --muted: #615f5f;
+  /** Disabled / tertiary. */
+  --faint: #b2b2b2;
+
+  /**
+   * The reference's `#e5e7eb` measures 1.24:1 against a white card and only
+   * 1.15:1 against the page — on a near-white page the card edge simply
+   * disappears. These are a step darker and very slightly cool, so the edge
+   * reads as crisp rather than dirty, and they sit at 1.37:1 / 1.26:1.
+   */
+  --border: #d8dde4;
+  --border-strong: #c9d0da;
+  /** Hairline inside dark panels. */
+  --border-invert: rgba(255, 255, 255, 0.14);
+
+  /* --- brand, sampled from logo.png ------------------------------------ */
+
+  /** Dark surfaces: header, footer, CTA panels, the film well. */
+  --navy: #1b2435;
+  --navy-deep: #141a28;
+  --navy-lift: #2a3547;
+  /** The mark's gold. Used only inside the logo lockup on dark grounds — the
+      interactive accent below is what carries the UI. */
+  --gold: #c1ab80;
+
+  /* --- accent ---------------------------------------------------------- */
+
+  /**
+   * The reference's `--_color---primary`, and the only saturated colour on the
+   * page. Fills: primary buttons, form submit, the success message, active
+   * filters. Never headings, never large surfaces.
+   */
+  --primary: #e03200;
+  /**
+   * Small accent TEXT on light grounds, and hover on fills. #e03200 measures
+   * 4.2:1 on the page grey — under AA for body sizes — where this is 5.1:1.
+   */
+  --primary-ink: #c42c00;
+  /** Accent on the navy surfaces. #e03200 is only 3.7:1 there; this is 5.5:1. */
+  --primary-on-dark: #ff6a3d;
+  --primary-tint: #fdefeb;
+  /** Confirmation: a completed stage, a verified owner. */
+  --ok: #3f8f5f;
+  --ok-tint: rgba(63, 143, 95, 0.12);
+
+  /* --- type ------------------------------------------------------------ */
+
+  --font: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /**
+   * The wordmark, and nothing else. Sancreek ships a single weight (400), so
+   * the lockup separates its two words by colour rather than by weight —
+   * asking for 600 would get a synthesised fake bold, which falls apart on a
+   * face with this much detail in the letterforms.
+   */
+  --font-wordmark: 'Sancreek', 'Poppins', system-ui, cursive;
+
+  --weight-light: 300;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Anchored on the reference's desktop sizes: 48 / 34 / 28 / 24 / 20. */
+  --h1: clamp(2rem, 1.35rem + 2.7vw, 3rem);
+  --h2: clamp(1.625rem, 1.4rem + 1vw, 2.125rem);
+  --h3: clamp(1.25rem, 1.1rem + 0.7vw, 1.75rem);
+  --h4: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
+  --h5: 1.25rem;
+
+  --text-lg: 1.125rem; /* 18px, 150% */
+  --text: 1rem; /* 16px, 160% */
+  --text-sm: 0.875rem; /* 14px, 130% */
+  --text-xs: 0.75rem; /* 12px, 120% */
+
+  /* --- shape ----------------------------------------------------------- */
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 18px;
+  --radius-pill: 30px;
+
+  /**
+   * Elevation ladder.
+   *
+   * Three things, all borrowed from how the good design systems do it:
+   *   - Layered. Offset and blur roughly double per layer; a single shadow
+   *     reads as a flat grey smear.
+   *   - Negative spread on the later layers, the way Tailwind's scale does, so
+   *     the shadow stays tucked under the card instead of haloing around it.
+   *   - Tinted to the brand navy's hue rather than black. Neutral black over a
+   *     warm near-white page goes muddy; hsl(220deg 45% 20%) is the same family
+   *     as `--navy`, so the shade reads as belonging to the page.
+   */
+  --shadow-xs: 0 1px 2px -1px hsl(220deg 45% 20% / 0.08);
+  --shadow-sm:
+    0 1px 2px -1px hsl(220deg 45% 20% / 0.09),
+    0 3px 6px -3px hsl(220deg 45% 20% / 0.07);
+  --shadow-md:
+    0 2px 4px -2px hsl(220deg 45% 20% / 0.08),
+    0 6px 12px -4px hsl(220deg 45% 20% / 0.09),
+    0 14px 24px -8px hsl(220deg 45% 20% / 0.08);
+  --shadow-lg:
+    0 4px 8px -4px hsl(220deg 45% 20% / 0.1),
+    0 12px 22px -8px hsl(220deg 45% 20% / 0.1),
+    0 28px 44px -16px hsl(220deg 45% 20% / 0.1);
+  /** Focus ring, the shadcn/Tailwind pattern: a soft halo outside the border. */
+  --ring: 0 0 0 3px hsl(14deg 100% 44% / 0.18);
+
+  /* --- layout ---------------------------------------------------------- */
+
+  /** The reference's container width. */
+  --max: 1336px;
+  --gutter: clamp(1.25rem, 4vw, 2.5rem);
+  --measure: 38rem;
+  --header-h: 4.5rem;
+  --section-y: clamp(2.5rem, 4vw, 3.75rem);
+}
