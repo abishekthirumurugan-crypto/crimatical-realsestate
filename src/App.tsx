@@ -7,6 +7,7 @@ import { RouterProvider, useRoute } from './lib/router';
 import { COMPANY, findPost } from './content/site';
 
 import Home from './pages/Home';
+import Details from './pages/Details';
 import About from './pages/About';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
@@ -23,6 +24,7 @@ import './styles/actions.css';
 import './styles/elevation.css';
 
 const BLOG_PREFIX = '/blog/';
+const PROJECT_TITLE = `${COMPANY.name} Block A`;
 
 /** The page for a route, plus the title that goes with it. */
 function resolve(route: string): { element: React.ReactElement; title: string } {
@@ -31,6 +33,9 @@ function resolve(route: string): { element: React.ReactElement; title: string } 
       element: <Home />,
       title: `${COMPANY.name} — Block A, Plot 7, Perungudi`,
     };
+  }
+  if (route === '/details') {
+    return { element: <Details />, title: `${PROJECT_TITLE} — the project` };
   }
   if (route === '/about') {
     return { element: <About />, title: `About us — ${COMPANY.name}` };

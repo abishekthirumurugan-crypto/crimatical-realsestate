@@ -3,8 +3,10 @@
 How to turn 700 frames (or an existing master) into a file that seeks fast in
 **both** directions.
 
-Every number below was measured on this repo's `realestate.mp4` with ffmpeg 9.0
-— 1280×720, 24 fps, 10.00 s, 240 frames, 2.02 Mbps, **2.58 MiB**.
+The measurements below were taken on this repo's earlier master, `realestate.mp4`
+with ffmpeg 9.0 — 1280×720, 24 fps, 10.00 s, 240 frames, 2.02 Mbps, **2.58 MiB**.
+They are what the settings below are based on. The file currently shipped is
+different — see **The film currently shipped**.
 
 ## TL;DR
 
@@ -23,14 +25,67 @@ ffmpeg -i input.mp4 -an \
 Or run the wrappers, which also **verify** the result:
 
 ```bash
-./scripts/encode-scrub.sh -i realestate.mp4 -o public/video/block-a -w 1280
+./scripts/encode-scrub.sh -i realestate-upscaled.mp4 -o public/video/tower -w 1280 -f 24
 ```
 ```powershell
-.\scripts\encode-scrub.ps1 -InputPath .\realestate.mp4 -Output .\public\video\block-a -Width 1280
+.\scripts\encode-scrub.ps1 -InputPath .\realestate-upscaled.mp4 -Output .\public\video\tower -Width 1280 -Fps 24
 ```
 
 What that bought on this file: worst-case seek work fell from **229 frames to 9**,
 for **+17 %** on disk (2.58 MiB → 3.03 MiB).
+
+---
+
+## The film currently shipped
+
+`realestate-upscaled.mp4` — 2560×1440, 24 fps, 10.00 s, 240 frames, 9.96 Mbps,
+**12.0 MiB**, `has_b_frames=0`, keyframes every 60 frames, no audio.
+
+```bash
+CURVE="curves=r='0/0 0.22/0.22 0.50/0.60 0.7255/0.9647 1/1':g='0/0 0.22/0.22 0.50/0.60 0.7255/0.9647 1/1':b='0/0 0.22/0.22 0.50/0.60 0.7333/0.9647 1/1'"
+
+./scripts/encode-scrub.sh -i realestate-upscaled.mp4 -o public/video/tower        -w 1280 -f 24 -p "$CURVE"
+./scripts/encode-scrub.sh -i realestate-upscaled.mp4 -o public/video/tower-mobile -w  720 -f 24 -p "$CURVE"
+```
+
+Or just `npm run encode`, which carries the same curve.
+
+Shipped result: **1280×720, 24 fps, 240 frames, max GOP 10, no B-frames, 1194 KiB.**
+The 720px mobile cut is 549 KiB.
+
+### The tone curve, and why it is not optional
+
+The master renders its building on a **mid-grey studio sweep**, measured at
+rgb(185, 185, 187) across the frame edges. That is a problem the CSS cannot
+solve. The page is near-white, so a `contain` fit puts a grey rectangle on it
+with a hard edge; and the building's own lit concrete measures the same tone as
+the sweep, so no clamp, key or blend separates the two.
+
+The curve fixes it at the source. It is a shoulder, not a brightness lift:
+the bottom quarter is left alone (`0.22/0.22`), the mid-tones are lifted gently
+(`0.50/0.60`), and the backdrop's own value is mapped to just under white
+(`0.7255/0.9647`). Blue gets its own slightly different input point because the
+sweep is a shade cool and a single master curve would have carried that cast
+into the highlights.
+
+Measured on the output, over six frames spanning the film:
+
+| | before | after |
+|---|---:|---:|
+| frame-edge median | #b8b8bb | **#f4f4f6** |
+| contrast against the `#f6f6f6` page | 1.41 | **1.01** |
+| body copy over the gutter columns, worst frame | 2.64:1 | **5.61:1** |
+
+At 1.01 the letterbox around the frame is indistinguishable from the frame
+itself, which is what lets the film be full-bleed with no visible edge anywhere.
+The building keeps its modelling — the curve costs about 7% on disk
+(1110 → 1194 KiB) and nothing in quality.
+
+The one thing the curve does not reach is the building's **cast shadow**, which
+runs off the right-hand edge of the frame from about halfway through. That is
+handled in CSS, by `.film__wash` in `src/styles/film.css`.
+
+If you swap the master for footage already shot on white, drop the `-p` flag.
 
 ---
 

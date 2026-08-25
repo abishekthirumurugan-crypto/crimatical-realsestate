@@ -1,9 +1,10 @@
 /**
  * Header, footer, logo lockup and buttons.
  *
- * The header is a solid white bar on every page, including over the film — the
- * reference keeps its chrome opaque and light, and a translucent bar would put
- * grey type on moving footage.
+ * The header is frosted glass on every page, including over the film. It is the
+ * one surface on the site with arbitrary content passing behind it, so it takes
+ * `--glass-strong` rather than the `--glass` the cards use — see the note on
+ * those tokens for the measurement that sets the difference.
  */
 
 /* -------------------------------------------------------------- the lockup */
@@ -108,7 +109,7 @@
 }
 
 .button--outline {
-  background: var(--surface);
+  background: var(--glass);
   border-color: var(--border-strong);
   color: var(--ink);
 }
@@ -144,8 +145,25 @@
   position: fixed;
   inset: 0 0 auto;
   z-index: 30;
-  background: var(--surface);
+  background: var(--glass-strong);
+  /**
+   * `saturate` is doing as much work here as the blur. At 90% white the
+   * backdrop only contributes a tenth of the bar's colour, and lifting its
+   * chroma first is what lets the page's wash read through the glass instead of
+   * averaging out to plain white.
+   */
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
   border-bottom: 1px solid var(--border);
+}
+
+/* Nothing here degrades gracefully on its own: without the filter the bar is
+   just a 90% white wash and the content behind it stays legible through it. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header,
+  .site-header__panel {
+    background: var(--surface);
+  }
 }
 
 .site-header__bar {
@@ -194,12 +212,20 @@
   transition: color 200ms ease;
 }
 
+/**
+ * `--primary-ink`, not `--primary`.
+ *
+ * On the old opaque white bar the brand orange measured 4.54:1 — AA by a
+ * hundredth. Through glass, with the navy CTA panel passing underneath, it
+ * drops to 3.74:1. The darker accent is what the token exists for, and at
+ * 4.67:1 in that same worst case it is better than the bar it replaces.
+ */
 .site-header__link:hover {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 .site-header__link[data-active='true'] {
-  color: var(--primary);
+  color: var(--primary-ink);
 }
 
 /* Drawn on a pseudo-element so switching pages never changes the link's own
@@ -229,7 +255,7 @@
   height: 2.6rem;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
+  background: var(--glass);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   color: var(--ink);
@@ -268,7 +294,11 @@
   flex-direction: column;
   padding: 0.5rem var(--gutter) 1.5rem;
   border-top: 1px solid var(--border);
-  background: var(--surface);
+  /* Same glass as the bar it hangs off, and for the same reason — the page
+     scrolls behind it while it is open. */
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
 }
 
 .site-header__panel[hidden] {
@@ -448,62 +478,3 @@
   }
 }
 
-/* ------------------------------------------------------- replay the film
- *
- * Offered only once the film has been collapsed — i.e. it has already been
- * watched this session — and only while the reader is back near the top of the
- * page, which is the moment they would be looking for it.
- */
-
-.replay {
-  position: fixed;
-  z-index: 25;
-  top: calc(var(--header-h) + 0.9rem);
-  left: 50%;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.62rem 1.25rem;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--primary);
-  color: #fff;
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  line-height: 1.3;
-  cursor: pointer;
-  box-shadow: var(--shadow-md);
-  /* translateX(-50%) is doing the centring, so the reveal animates on top of
-     it rather than replacing it. */
-  transform: translateX(-50%) translateY(-0.6rem);
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 260ms ease,
-    transform 260ms ease,
-    background-color 200ms ease;
-}
-
-.replay[data-visible='true'] {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-  pointer-events: auto;
-}
-
-.replay:hover {
-  background: var(--primary-ink);
-}
-
-.replay__icon {
-  font-size: 0.95em;
-  line-height: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* No slide — but it must keep its own centring transform. */
-  .replay,
-  .replay[data-visible='true'] {
-    transform: translateX(-50%);
-  }
-}

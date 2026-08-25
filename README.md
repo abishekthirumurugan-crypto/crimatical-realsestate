@@ -1,6 +1,6 @@
 # Temp RealEstate — scroll-scrubbed property site
 
-A four-page development site whose hero is ten seconds of construction footage,
+A four-page development site whose hero is a building assembling itself,
 scrubbed frame by frame against scroll depth. React 19 + TypeScript + Vite,
 **zero runtime dependencies beyond React** — no GSAP, no Framer Motion, no
 Lenis, and no router library.
@@ -10,7 +10,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # tsc --noEmit && vite build
 npm run typecheck
-npm run encode     # re-encode realestate.mp4 -> public/video/
+npm run encode     # re-encode realestate-upscaled.mp4 -> public/video/
 ```
 
 > **This is a template build.** The company, the project, the people, the
@@ -208,6 +208,12 @@ staff laid on its side, graduated every 2 %, with major marks at the six
 construction stages and a travelling head reading the current position. The same
 instrument that set the floor levels in the footage, measuring how far through
 the build you have scrolled.
+
+> **The film runs light.** The current cut is a tower isolated on pure white, so
+> `film.css` is a light treatment and `objectFit` is `contain` — nothing is
+> cropped, and the letterbox is invisible because the stage is the same white as
+> the footage. If the film is swapped for dark footage again, the overlay
+> colours in `film.css` are the part that has to move with it.
 
 ### The film, and getting back to it
 

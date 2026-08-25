@@ -1,8 +1,11 @@
 /**
- * Card elevation and edges.
+ * Card elevation, glass and edges.
  *
- * Loaded last, so it owns `box-shadow` for every card-like surface in one place
- * rather than having each component invent its own.
+ * Loaded last, so it owns `box-shadow` — and now the glass fill — for every
+ * card-like surface in one place rather than having each component invent its
+ * own. The components still declare `background: var(--surface)`; that is what
+ * they fall back to, and this file is what makes them translucent, in one rule,
+ * for the whole system.
  *
  * Three ideas, all standard practice in the design systems that do this well:
  *
@@ -17,6 +20,42 @@
  * See `--shadow-*` in tokens.css for the values.
  */
 
+/* ------------------------------------------------------------------- glass
+ *
+ * The translucent fill, applied to the same list the shadows use.
+ *
+ * **No `backdrop-filter` here, deliberately.** These cards sit in the document
+ * flow on a flat near-white page — a backdrop with nothing in it to blur. The
+ * filter would be invisible on all twenty-odd cards a page like `/details` puts
+ * on screen while still forcing a fresh backdrop composite for each of them on
+ * every scroll frame. The blur is spent where there is something to blur: the
+ * fixed header, which content passes behind.
+ *
+ * The white 70% hairline in the glass recipe is left off for the same kind of
+ * reason. Measured against these fills it lands at 1.03:1 — invisible — and it
+ * would be replacing a `--border` that measures 1.25:1. The edge is what makes
+ * a translucent card read as an object; it keeps the border it had.
+ */
+
+.stat,
+.spec-card,
+.tl__card,
+.unit,
+.service,
+.quote,
+.media,
+.figure,
+.value,
+.person,
+.post-card,
+.entry__nav-link,
+.contact__block,
+.contact__form,
+.filter,
+.partner {
+  background: var(--glass);
+}
+
 /* ------------------------------------------------------- resting elevation */
 
 .stat,
@@ -28,13 +67,12 @@
 .media,
 .figure,
 .value,
-.timeline,
 .person,
 .post-card,
 .entry__nav-link,
 .contact__block,
 .contact__form {
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-glass);
 }
 
 /* The dashed placeholder is a gap, not a card. */
@@ -49,9 +87,9 @@
 }
 
 /* Once the page scrolls under it, the bar needs more than a hairline to read as
-   being in front of the content. */
+   being in front of the content — and more so now that it is see-through. */
 .site-header {
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-glass);
 }
 
 /* --------------------------------------------------------------- the lift
@@ -65,6 +103,8 @@
  * rather than one morphing into the other, which looks better anyway.
  */
 
+/* `.spec-card` is not in this list: SpotlightCard already positions it, and
+   its spotlight `::before` and this lift `::after` are separate pseudos. */
 .unit,
 .service,
 .post-card,
@@ -72,6 +112,7 @@
   position: relative;
 }
 
+.spec-card::after,
 .unit::after,
 .service::after,
 .post-card::after,
@@ -88,6 +129,7 @@
   pointer-events: none;
 }
 
+.spec-card:hover::after,
 .unit:hover::after,
 .service:hover::after,
 .post-card:hover::after,
@@ -102,6 +144,7 @@
 
 /* The edge firms up alongside the lift. A card that only gains a shadow on
    hover still reads as flat at the border. */
+.spec-card:hover,
 .unit:hover,
 .service:hover,
 .post-card:hover,
@@ -116,6 +159,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .spec-card,
   .unit,
   .service,
   .post-card,
@@ -162,6 +206,22 @@
 .field select:focus-visible,
 .field textarea:focus-visible {
   outline: none;
+}
+
+/**
+ * The floating rail.
+ *
+ * Its discs keep their brand fills — the green *is* the WhatsApp affordance —
+ * so they take the other half of the glass recipe instead: the lit 70% white
+ * edge, which is legible here precisely because there is a saturated colour
+ * under it, and the wide halo so the rail belongs to the same system as the
+ * cards it floats over.
+ */
+.actions__item {
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    var(--shadow-md),
+    0 8px 32px rgba(80, 90, 140, 0.08);
 }
 
 .filter {

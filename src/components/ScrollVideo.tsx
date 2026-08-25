@@ -155,7 +155,26 @@ export interface ScrollVideoProps {
   /** Fires if loading fails. */
   onError?: (error: Error) => void;
   className?: string;
+  /**
+   * Class for the sticky stage — the inner element that is exactly one
+   * viewport, holds the video and clips the letterbox.
+   *
+   * Separate from `className`, which lands on the outer wrapper, because the
+   * wrapper is `scrollLengthVh` screens tall. Anything sized against the
+   * viewport — a background gradient above all — has to be set here or it
+   * resolves against five screens and stretches.
+   */
+  stageClassName?: string;
   style?: CSSProperties;
+  /**
+   * Merged over the media element's own styles, after them.
+   *
+   * The element is absolutely positioned to fill the stage, which a stylesheet
+   * cannot override because those styles are inline. This is the seam: pass
+   * `insetInline` to reserve gutters beside the frame, for instance, and drive
+   * it from a custom property so it can be responsive.
+   */
+  videoStyle?: CSSProperties;
 }
 
 /* -------------------------------------------------------------- constants */
@@ -430,7 +449,9 @@ export default function ScrollVideo({
   onReady,
   onError,
   className,
+  stageClassName,
   style,
+  videoStyle,
   containerRef,
   videoRef: externalVideoRef,
 }: ScrollVideoProps) {
@@ -900,7 +921,7 @@ export default function ScrollVideo({
 
   return (
     <div ref={setWrapper} className={className} style={wrapperStyle} data-scroll-video="">
-      <div style={stageStyle}>
+      <div className={stageClassName} style={stageStyle}>
         {objectFit === 'contain' && ambientLetterbox && (
           <canvas
             ref={backdropRef}
@@ -928,7 +949,7 @@ export default function ScrollVideo({
           disableRemotePlayback
           tabIndex={-1}
           aria-hidden="true"
-          style={{ ...VIDEO_STYLE, objectFit, opacity: ready ? 1 : 0 }}
+          style={{ ...VIDEO_STYLE, objectFit, opacity: ready ? 1 : 0, ...videoStyle }}
         />
 
         {!ready &&
@@ -962,7 +983,11 @@ const STAGE_STYLE: CSSProperties = {
   // Deliberately no `contain`: containment on a sticky element is
   // inconsistently implemented across engines, and `overflow: hidden` already
   // gives this stage the only clipping it needs.
-  backgroundColor: '#000',
+  //
+  // No background either: an inline colour here would beat any class the caller
+  // puts on the wrapper, which is exactly what happens with `object-fit:
+  // contain` — the letterbox takes the stage's colour, and the caller is the
+  // only one who knows what the footage sits on. Set it on the wrapper.
 };
 
 const BACKDROP_STYLE: CSSProperties = {

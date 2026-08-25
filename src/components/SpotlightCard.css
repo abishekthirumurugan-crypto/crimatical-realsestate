@@ -1,0 +1,57 @@
+/*
+ * React Bits — SpotlightCard.
+ *
+ * Effect only. The card's fill, border, radius and padding stay with whatever
+ * class is composed alongside `.spotlight-card`.
+ */
+
+.spotlight-card {
+  position: relative;
+  /* Centred, so a card the pointer has never crossed still lights from the
+     middle rather than from its top-left corner. */
+  --spotlight-x: 50%;
+  --spotlight-y: 50%;
+  --spotlight-color: rgba(224, 50, 0, 0.1);
+}
+
+.spotlight-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Not `overflow: hidden` on the card: that would clip the hover shadow,
+     which is painted outside the border box. */
+  border-radius: inherit;
+  background: radial-gradient(
+    18rem circle at var(--spotlight-x) var(--spotlight-y),
+    var(--spotlight-color),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 380ms ease;
+  pointer-events: none;
+  /* Under the card's own content, above its background. */
+  z-index: 0;
+}
+
+/* Content has to outrank the glow, or the gradient washes over the figures. */
+.spotlight-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Only where there is a real pointer to follow. On a touch screen the
+   gradient would either never appear or stick wherever the last tap landed. */
+@media (hover: hover) and (pointer: fine) {
+  .spotlight-card:hover::before,
+  .spotlight-card:focus-within::before {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight-card::before {
+    /* The glow is motion — it exists to track the pointer. Drop it rather
+       than fading a static one in. */
+    display: none;
+  }
+}

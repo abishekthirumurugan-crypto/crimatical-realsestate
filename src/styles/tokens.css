@@ -25,6 +25,34 @@
    */
   --band: #ecedef;
 
+  /* --- glass ------------------------------------------------------------
+   *
+   * One recipe, two strengths.
+   *
+   * `--glass` is the fill for anything that sits *on* the page — cards, pills,
+   * the outline button. 55% white over the near-white page lands at #fbfbfb: on
+   * a flat ground the translucency is close to invisible and it is the halo in
+   * `--shadow-glass` that does the visible work. It stays translucent anyway,
+   * because it is free, and because it is what makes these surfaces read
+   * correctly the moment one of them is put over the film.
+   *
+   * `--glass-strong` is for the fixed header, and it is deliberately not 55%.
+   * The header is the only glass on the site with arbitrary content passing
+   * behind it, and that content includes the navy CTA panel: at 55% the nav
+   * links measure 2.32:1 while the panel is under the bar. At 90% they hold
+   * 5.23:1 and the bar still reads as frosted rather than flat white.
+   */
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-strong: rgba(255, 255, 255, 0.9);
+  /**
+   * The lit edge. Only used where the glass sits on something with tone — the
+   * coloured discs on the floating rail. On a light card a 70% white hairline
+   * measures 1.03:1 against the fill, i.e. nothing, and it would replace a
+   * `--border` that measures 1.25:1; see the border note below.
+   */
+  --glass-edge: rgba(255, 255, 255, 0.7);
+  --glass-blur: 20px;
+
   /** Headings and primary text. */
   --ink: #0a0a0a;
   /** Body copy, captions, anything secondary. */
@@ -132,6 +160,16 @@
     0 4px 8px -4px hsl(220deg 45% 20% / 0.1),
     0 12px 22px -8px hsl(220deg 45% 20% / 0.1),
     0 28px 44px -16px hsl(220deg 45% 20% / 0.1);
+  /**
+   * Resting shade for the glass surfaces: a wide, soft, blue-grey halo.
+   *
+   * The hairline layer is kept from `--shadow-sm`. A translucent card has a
+   * translucent edge, and the 32px halo on its own is too diffuse to define one
+   * — the tight layer is what stops the card dissolving into the page.
+   */
+  --shadow-glass:
+    0 1px 2px -1px hsl(220deg 45% 20% / 0.09),
+    0 8px 32px rgba(80, 90, 140, 0.08);
   /** Focus ring, the shadcn/Tailwind pattern: a soft halo outside the border. */
   --ring: 0 0 0 3px hsl(14deg 100% 44% / 0.18);
 

@@ -1,0 +1,102 @@
+/*
+ * React Bits TargetCursor (JS-CSS variant), with two edits for this site.
+ *
+ * 1. `mix-blend-mode: difference` is dropped. Difference against black is a
+ *    no-op, so the requested #000000 cursor would have been invisible on the
+ *    white stat cards. Both colours here are explicit, so normal blending is
+ *    what we want.
+ * 2. The dot and corner colours come from inline styles on the elements, so
+ *    the hard-coded #fff below is only a fallback.
+ */
+
+.target-cursor-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 70;
+  transform: translate(-50%, -50%);
+}
+
+.target-cursor-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+
+.target-cursor-corner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 3px solid #fff;
+  will-change: transform;
+}
+
+.corner-tl {
+  transform: translate(-150%, -150%);
+  border-right: none;
+  border-bottom: none;
+}
+
+.corner-tr {
+  transform: translate(50%, -150%);
+  border-left: none;
+  border-bottom: none;
+}
+
+.corner-br {
+  transform: translate(50%, 50%);
+  border-left: none;
+  border-top: none;
+}
+
+.corner-bl {
+  transform: translate(-150%, 50%);
+  border-right: none;
+  border-top: none;
+}
+
+/* ------------------------------------------------------------- cursor zone */
+
+/*
+ * The overlay tracks the pointer across the whole document so that entering the
+ * zone never snaps it in from the middle of the viewport. It is only *shown*
+ * while the pointer is inside a zone, which is what confines the effect to the
+ * stat cards without ever unmounting and remounting the component.
+ */
+
+.cursor-zone-layer {
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.cursor-zone-layer[data-active='true'] {
+  opacity: 1;
+}
+
+/* The native arrow is hidden only inside the zone, not site-wide. */
+.cursor-zone,
+.cursor-zone * {
+  cursor: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-zone-layer {
+    display: none;
+  }
+
+  .cursor-zone,
+  .cursor-zone * {
+    cursor: auto;
+  }
+}

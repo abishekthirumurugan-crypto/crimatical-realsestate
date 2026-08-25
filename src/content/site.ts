@@ -46,6 +46,7 @@ export interface NavItem {
 
 export const NAV: NavItem[] = [
   { label: 'Home', to: '/' },
+  { label: 'Details', to: '/details' },
   { label: 'About us', to: '/about' },
   { label: 'Journal', to: '/blog' },
   { label: 'Contact us', to: '/contact' },
@@ -345,9 +346,9 @@ export const FOOTER_LINKS: { heading: string; items: NavItem[] }[] = [
   {
     heading: 'Current project',
     items: [
-      { label: 'Block A — Plot 7', to: '/' },
-      { label: 'Build log', to: '/#build-log' },
-      { label: 'Residences', to: '/#residences' },
+      { label: 'Block A — Plot 7', to: '/details' },
+      { label: 'Build log', to: '/details#build-log' },
+      { label: 'Residences', to: '/details#residences' },
     ],
   },
 ];
