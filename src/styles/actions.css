@@ -56,6 +56,28 @@
   filter: brightness(1.08);
 }
 
+/*
+ * The enquiry disc is a <button> — it opens the popup rather than going
+ * anywhere — so it has to be talked out of the things a button brings with it
+ * that an <a> does not. Everything else it already shares.
+ *
+ * There is deliberately no `background-color` here, and there was: a
+ * `transparent` meant to clear the UA button grey, annotated as something that
+ * "must not outrank" the disc's own fill. It outranked it. `button.actions__item`
+ * is an element plus a class where `.actions__item--enquiry` is a class alone,
+ * so the transparent won and the disc rendered as nothing at all — a white
+ * envelope, `color: #fff` inherited from the rail, on a near-white page.
+ *
+ * It was never needed either way. A UA declaration loses to ANY author
+ * declaration regardless of specificity, so the fill on
+ * `.actions__item--enquiry` clears the grey by itself.
+ */
+button.actions__item {
+  font: inherit;
+  border: 0;
+  cursor: pointer;
+}
+
 .actions__icon {
   display: inline-flex;
   align-items: center;
@@ -99,7 +121,7 @@
 }
 
 .actions__item--call {
-  background: var(--navy);
+  background: var(--dark);
 }
 
 .actions__item--enquiry {

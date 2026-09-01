@@ -185,8 +185,25 @@ const REF_FRAME_MS = 1000 / 60;
 const SETTLE_EPSILON = 1e-4;
 /** Never re-issue a seek smaller than this (seconds). */
 const MIN_SEEK_DELTA = 1 / 240;
-/** If the decoder never reports back, release the gate anyway (ms). */
+/**
+ * If the decoder never reports back, release the gate anyway (ms).
+ *
+ * A floor, not the value. A fixed watchdog is safe only while it is longer than
+ * the decoder actually takes; the moment a device is slower than it, every
+ * expiry issues a fresh seek that ABORTS the one still in flight, and a scrub
+ * that is merely slow becomes one that never lands a frame at all. The picture
+ * freezes while the scroll keeps moving — which is not a slow decoder, it is a
+ * decoder being interrupted at a fixed interval forever.
+ *
+ * So the real watchdog is learned from the device: three times the measured
+ * seek latency, floored here and capped below. On anything quick this is
+ * exactly the old 250ms; on a phone that needs 400ms a seek, it waits.
+ */
 const SEEK_WATCHDOG_MS = 250;
+/** However slow the decoder proves to be, give up on a seek by here (ms). */
+const MAX_SEEK_WATCHDOG_MS = 1000;
+/** Weight of the newest sample in the rolling seek-latency estimate. */
+const SEEK_LATENCY_ALPHA = 0.2;
 /** Smallest progress change worth re-rendering the overlay for. */
 const PROGRESS_EPSILON = 1 / 2000;
 /** Clamp on the rAF delta, so returning from a background tab doesn't jump the ease. */
@@ -228,9 +245,21 @@ const PROXY_H = 36;
 /** Don't redraw the backdrop more often than this. */
 const AMBIENT_MS = 180;
 
+/**
+ * The part of rVFC's metadata this component uses.
+ *
+ * `mediaTime` is the presentation timestamp of the frame that was just put on
+ * screen — the only way to ask "is the picture showing the frame I asked for?"
+ * rather than "has the decoder emitted something?", which is the difference
+ * between the seek gate working and the seek gate lying. See the gating effect.
+ */
+interface FrameMetadata {
+  mediaTime: number;
+}
+
 /** Video element with the (still non-standard) rVFC hook typed in. */
 type FrameCallbackVideo = HTMLVideoElement & {
-  requestVideoFrameCallback?: (cb: () => void) => number;
+  requestVideoFrameCallback?: (cb: (now: number, metadata: FrameMetadata) => void) => number;
   cancelVideoFrameCallback?: (handle: number) => void;
 };
 
@@ -497,6 +526,8 @@ export default function ScrollVideo({
   const visibleRef = useRef(true);
   const seekPendingRef = useRef(false);
   const seekIssuedAtRef = useRef(0);
+  /** Rolling estimate of how long THIS decoder takes to serve a seek (ms). */
+  const seekLatencyRef = useRef(0);
   const lastSeekTimeRef = useRef(-1);
   const durationRef = useRef(0);
   const committedProgressRef = useRef(0);
@@ -587,7 +618,12 @@ export default function ScrollVideo({
         // centre is (n + 0.5)/fps, which is the safest point to land on.
         if (fps) time = (Math.round(time * fps - 0.5) + 0.5) / fps;
 
-        if (seekPendingRef.current && now - seekIssuedAtRef.current > SEEK_WATCHDOG_MS) {
+        // Learned from the device rather than assumed — see SEEK_WATCHDOG_MS.
+        const watchdog = Math.min(
+          MAX_SEEK_WATCHDOG_MS,
+          Math.max(SEEK_WATCHDOG_MS, seekLatencyRef.current * 3),
+        );
+        if (seekPendingRef.current && now - seekIssuedAtRef.current > watchdog) {
           seekPendingRef.current = false; // decoder went quiet; don't deadlock
         }
 
@@ -754,6 +790,12 @@ export default function ScrollVideo({
 
     const release = () => {
       if (!seekPendingRef.current) return;
+      // What this decoder actually costs, kept as a rolling mean so one slow
+      // seek does not move the watchdog much and a slow DEVICE moves it fast.
+      const latency = performance.now() - seekIssuedAtRef.current;
+      seekLatencyRef.current = seekLatencyRef.current
+        ? seekLatencyRef.current * (1 - SEEK_LATENCY_ALPHA) + latency * SEEK_LATENCY_ALPHA
+        : latency;
       seekPendingRef.current = false;
       kick(); // the loop may have parked while waiting on this seek
     };
@@ -767,13 +809,48 @@ export default function ScrollVideo({
     //
     // Using both keeps the paint-accurate timing where available without ever
     // parking on the watchdog.
+    //
+    // But rVFC fires for EVERY presented frame, not only for the one this seek
+    // asked for — and a frame the decoder had already queued before the seek
+    // was issued presents first. Released on that, the gate opens while the
+    // real seek is still in flight, the next tick assigns `currentTime` again,
+    // and the browser aborts the seek it had not finished. Under a continuous
+    // scroll that repeats every frame: seeks are issued steadily, each one
+    // cancels the last, and the picture stops advancing while the scroll does
+    // not. So a presented frame only counts if it IS the frame we asked for —
+    // within half a frame of it. `seeked` remains the guaranteed release, so a
+    // seek that lands somewhere unexpected still opens the gate; this only
+    // stops rVFC opening it early and wrongly.
     const useRvfc = typeof video.requestVideoFrameCallback === 'function';
     let handle: number | null = null;
 
+    /*
+     * "Is this the frame the seek asked for?", compared as frame INDICES.
+     *
+     * Not as a distance in seconds, which is the obvious way and is wrong here:
+     * the seek target is a frame CENTRE, `(n + 0.5) / fps`, while the frame that
+     * satisfies it presents at its own PTS of `n / fps`. A matching frame is
+     * therefore always exactly half a frame from the request — sitting on the
+     * boundary of any half-frame tolerance, and landing on whichever side of it
+     * floating-point rounding happens to fall. Indices have no boundary to sit
+     * on: the frame containing the requested centre is `floor(asked * fps)`,
+     * the presented one is `round(mediaTime * fps)`, and either they are the
+     * same frame or they are not.
+     *
+     * Without a declared fps there are no frame indices to compare, so a
+     * distance is all there is; 50ms is roughly a frame at any sane rate.
+     */
+    const isAskedFor = (mediaTime: number) => {
+      const asked = lastSeekTimeRef.current;
+      if (asked < 0) return false;
+      if (!fps) return Math.abs(mediaTime - asked) <= 0.05;
+      return Math.round(mediaTime * fps) === Math.floor(asked * fps);
+    };
+
     if (useRvfc) {
-      const onFrame = () => {
-        release();
+      const onFrame = (_now: number, metadata: FrameMetadata) => {
         handle = video.requestVideoFrameCallback!(onFrame);
+        if (isAskedFor(metadata.mediaTime)) release();
       };
       handle = video.requestVideoFrameCallback!(onFrame);
     }
@@ -783,7 +860,7 @@ export default function ScrollVideo({
       if (useRvfc && handle !== null) video.cancelVideoFrameCallback?.(handle);
       video.removeEventListener('seeked', release);
     };
-  }, [ready, kick]);
+  }, [ready, kick, fps]);
 
   /* -------------------------------------------------- ambient backdrop ---- */
 

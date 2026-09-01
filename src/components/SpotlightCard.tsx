@@ -37,7 +37,9 @@ interface SpotlightCardProps {
   className?: string;
   /**
    * Colour of the glow. Wants a low alpha — the spotlight sits on a near-white
-   * card, so anything solid reads as a stain rather than as light.
+   * card, so anything solid reads as a stain rather than as light. The default
+   * is `--primary` at 12%, mixed rather than written out, so the glow follows
+   * the accent if the palette moves.
    */
   spotlightColor?: string;
   style?: CSSProperties;
@@ -47,7 +49,7 @@ export default function SpotlightCard({
   children,
   as: Tag = 'div',
   className = '',
-  spotlightColor = 'rgba(224, 50, 0, 0.1)',
+  spotlightColor = 'color-mix(in srgb, var(--primary) 12%, transparent)',
   style,
 }: SpotlightCardProps) {
   const ref = useRef<HTMLElement | null>(null);

@@ -209,11 +209,12 @@ construction stages and a travelling head reading the current position. The same
 instrument that set the floor levels in the footage, measuring how far through
 the build you have scrolled.
 
-> **The film runs light.** The current cut is a tower isolated on pure white, so
-> `film.css` is a light treatment and `objectFit` is `contain` — nothing is
-> cropped, and the letterbox is invisible because the stage is the same white as
-> the footage. If the film is swapped for dark footage again, the overlay
-> colours in `film.css` are the part that has to move with it.
+> **The film runs dark.** The current cut is a photographic walkthrough — one
+> forward dolly from the street to the terrace — so the stage is `--dark-deep`,
+> the copy is white over a measured corner scrim, and every colour in
+> `film.css` is a dark-surface token. Swapping back to footage on a light ground
+> would invert all of it: the stage, the scrim, the copy colours, the loader,
+> and the focus-ring override in `base.css`.
 
 ### The film, and getting back to it
 

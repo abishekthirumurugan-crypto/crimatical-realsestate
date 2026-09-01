@@ -1,0 +1,124 @@
+/*
+ * CardStack — a deck of cards that pins near the top of the screen and piles
+ * up as the page scrolls past it.
+ *
+ * The pin is `position: sticky`, and that is the whole point of this file.
+ *
+ * The deck this replaces pinned its cards from JavaScript: read `scrollY` on a
+ * scroll event, work out where the card ought to be, write a `translate3d`.
+ * That cannot be made steady. Scrolling happens on the compositor and the
+ * write happens on the main thread, so every frame paints the card at the
+ * position the LAST frame asked for — the card lags the page by a frame going
+ * down and leads it by a frame coming back, which is exactly the up-and-down
+ * shake you see when you rock the wheel. On a phone it was worse again,
+ * because the pin was a percentage of `innerHeight` and the URL bar changes
+ * `innerHeight` mid-scroll: the maths was being solved against a moving ruler.
+ *
+ * Sticky has neither problem. The browser resolves it during layout, before
+ * the frame is composited, so a pinned card is never a frame behind anything;
+ * and `vh` is the LARGE viewport, which a retracting URL bar does not change.
+ * The card cannot shake, because nothing is chasing the scroll position.
+ *
+ * What JavaScript still does is in CardStack.tsx, and it is only `--card-scale`.
+ */
+
+.cardstack {
+  /* Where the first card pins, measured from the top of the viewport. Under
+     the fixed header rather than level with it. */
+  --stack-top: 18vh;
+  /* How far each card peeks out below the one that lands on top of it. Enough
+     to count the deck by, not enough to read the card underneath and wonder
+     whether it is clickable. */
+  --stack-peek: 24px;
+  /* Dead space between cards before they stack. It is what makes the deck read
+     as cards arriving one at a time rather than a block sliding. */
+  --stack-gap: 100px;
+  /* How long the assembled deck holds on screen before it leaves. See the
+     tail element in CardStack.tsx for why this is an element and not padding. */
+  --stack-tail: 30vh;
+  display: block;
+  position: relative;
+  /* The deck paints as one object; a card in it should not be able to sort
+     itself against anything outside the deck. */
+  isolation: isolate;
+}
+
+/*
+ * The moving part.
+ *
+ * `--i` is the card's index, set in the TSX. Each card pins one `--stack-peek`
+ * lower than the one before it, which is what fans the pile out. Painting order
+ * is DOM order for positioned boxes, so a later card lands on top of an earlier
+ * one without a single `z-index`.
+ *
+ * A sticky box is constrained to its containing block, so no card can ever be
+ * painted below the end of the deck. The old implementation had to measure the
+ * overhang of a frozen deck and write it back as padding, because a
+ * `translate3d` does not respect anything; there is nothing here to measure.
+ */
+.cardstack__item {
+  position: sticky;
+  top: calc(var(--stack-top) + var(--i, 0) * var(--stack-peek));
+}
+
+/* The gap goes on the top of every card but the first, so nothing has to know
+   which card is last — the tail is the last child, not a card. */
+.cardstack__item + .cardstack__item {
+  margin-top: var(--stack-gap);
+}
+
+/*
+ * The scaled part, and it is deliberately not the same box as the pinned part.
+ *
+ * `transform-origin: top center` is load-bearing. The top edge of the card is
+ * the edge sticky has just pinned, and scaling from it leaves that edge exactly
+ * where it was — so the one property JavaScript writes cannot move the card
+ * vertically even by a pixel, however late the write lands. A scale that is a
+ * frame behind is invisible. A position that is a frame behind is the shake.
+ *
+ * It is a separate element from `.cardstack__item` so that the card inside can
+ * keep its own transform — the hover lift on `.unit`, the reveal on
+ * `.spec-card` — without the two fighting over one property.
+ *
+ * `transform` itself is left undeclared and written inline by the TSX. An
+ * inline write invalidates this one element; routing it through a custom
+ * property would invalidate every node inside the card, once per frame, for a
+ * value none of them read.
+ */
+.cardstack__card {
+  transform-origin: top center;
+}
+
+/* Only promoted while the deck is actually on screen. Eight decks' worth of
+   permanently promoted layers is memory spent on cards nobody is looking at. */
+.cardstack[data-active='true'] .cardstack__card {
+  will-change: transform;
+}
+
+/*
+ * The runway the assembled deck holds on for, and it has to be an element.
+ *
+ * Sticky is constrained by the containing block's CONTENT box, so padding on
+ * the deck would extend the box the cards are drawn in without extending the
+ * box they are allowed to stay pinned in — the last card would land and start
+ * leaving in the same breath. An in-flow spacer extends the content box, which
+ * is the thing sticky actually measures against.
+ */
+.cardstack__tail {
+  height: var(--stack-tail);
+  pointer-events: none;
+}
+
+/*
+ * The deck opts out of the reveal's transform, keeping the fade.
+ *
+ * `.reveal > *` in motion.css hands every direct child a `translateY(1.5rem)`
+ * that transitions to none. On any other child that is the entrance; on this
+ * one it is a transformed ancestor wrapped around a sticky box, which drags
+ * the pinned cards along with it for the 620ms the transition runs. Two
+ * classes to outrank the one in motion.css, whichever way round the two
+ * stylesheets land.
+ */
+.reveal > .cardstack.cardstack {
+  transform: none;
+}

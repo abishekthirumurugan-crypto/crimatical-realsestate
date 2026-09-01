@@ -1,0 +1,384 @@
+/**
+ * Motion.
+ *
+ * The problem this solves
+ * ----------------------
+ * The home page is scroll-*driven*: every pixel you scroll moves the film and
+ * the copy, and scrolling back moves them back. The inner pages were scroll-
+ * *triggered*: `useReveals` fires a single 700ms fade as a container enters
+ * view, unobserves it, and the page is inert from then on. Two things made that
+ * read flatter than it needed to:
+ *
+ *  - `.reveal` sat on the CONTAINER, so an eight-card grid arrived as one
+ *    block. Nothing staggered.
+ *  - Once shown, nothing moved again, ever.
+ *
+ * So the fix is not "more animation" but animation that keeps a relationship to
+ * scroll after it has arrived — which is what the film does, and the reason the
+ * two halves of the site should now feel related.
+ *
+ * Why it is split in two
+ * ----------------------
+ * Opacity and transform are handled by different mechanisms on purpose, and the
+ * reason is a failure mode rather than a preference.
+ *
+ * Scroll-driven animation (`animation-timeline`) is the better tool: it runs on
+ * the compositor, needs no JavaScript, and adds nothing to the bundle. But it
+ * resolves against the nearest scroll container, and getting that wrong does not
+ * degrade — it pins the element at the START of its animation. When that
+ * animation starts at `opacity: 0`, whole sections of the page silently
+ * disappear. That is exactly what happened here: `overflow-x: hidden` on `body`
+ * made body a scroll container (CSS computes the other axis to `auto` when one
+ * is `hidden`), every `view()` timeline resolved against a scrollport that never
+ * scrolls, and everything below the first screen reported `progress: 0`.
+ *
+ * So the split is by consequence of failure:
+ *
+ *  - **Anything that hides content** — opacity — uses the IntersectionObserver
+ *    path, which is proven and cannot leave the page blank. The stagger it was
+ *    missing comes from moving the transition onto the children and offsetting
+ *    them, which is plain CSS.
+ *  - **Anything purely additive** — the parallax transforms — uses `view()`.
+ *    If the timeline is unavailable or mis-resolves, the image sits still. It is
+ *    scaled up enough that its resting position still covers the frame, so the
+ *    worst case is an image that does not drift.
+ *
+ * (Tailwind and Bootstrap were on the table and are the wrong tool: neither has
+ * anything to say about scroll linkage, and both would duplicate or fight a
+ * token system whose palette is measured off the film. GSAP's ScrollTrigger
+ * would do the parallax from the main thread for ~30 KB; the platform does it
+ * on the compositor for nothing.)
+ */
+
+/* ------------------------------------------------------------- the stagger
+ *
+ * The reveal moves from the container to its children.
+ *
+ * `useReveals` still does exactly what it did — one observer, sets `data-shown`
+ * once, unobserves — so the trigger is unchanged and as reliable as it was. All
+ * that changes is what listens: eight cards now arrive one after another
+ * instead of as a slab.
+ *
+ * Delays rather than a scroll timeline, because this is the property that can
+ * hide content. A delay cannot mis-resolve.
+ */
+.reveal {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+.reveal > * {
+  opacity: 0;
+  transform: translateY(1.5rem);
+  transition:
+    opacity 620ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 620ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.reveal[data-shown='true'] > * {
+  opacity: 1;
+  transform: none;
+}
+
+/* Eight steps of 70ms. Past the eighth the delay stops growing — a grid deep
+   enough to need a ninth step is one where the reader has stopped watching the
+   entrance and started reading, and a second of lead-in reads as a page that
+   will not load. */
+.reveal[data-shown='true'] > *:nth-child(2) {
+  transition-delay: 70ms;
+}
+.reveal[data-shown='true'] > *:nth-child(3) {
+  transition-delay: 140ms;
+}
+.reveal[data-shown='true'] > *:nth-child(4) {
+  transition-delay: 210ms;
+}
+.reveal[data-shown='true'] > *:nth-child(5) {
+  transition-delay: 280ms;
+}
+.reveal[data-shown='true'] > *:nth-child(6) {
+  transition-delay: 350ms;
+}
+.reveal[data-shown='true'] > *:nth-child(7) {
+  transition-delay: 420ms;
+}
+.reveal[data-shown='true'] > *:nth-child(n + 8) {
+  transition-delay: 490ms;
+}
+
+/* Pills are small, numerous, and already read as one object. Staggering forty
+   of them is noise, so the bag moves as a bag. */
+.partners > *,
+.promises > * {
+  opacity: 1;
+  transform: none;
+  transition: none;
+  transition-delay: 0ms;
+}
+
+.partners,
+.promises {
+  opacity: 0;
+  transform: translateY(1.5rem);
+  transition:
+    opacity 620ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 620ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.partners[data-shown='true'],
+.promises[data-shown='true'] {
+  opacity: 1;
+  transform: none;
+}
+
+/* ------------------------------------------------------------- the flip
+ *
+ * The stat cards turn once on X and land on a dark face.
+ *
+ * The colour is `--dark` (#241e19) with ivory and brass on it — "Chocolate
+ * Brown / Ivory" and "Royal Gold / Brass" from the premium list, and also,
+ * already, this site's own dark surface. That is not a coincidence: the palette
+ * was sampled from the film, and the film's darks ARE the walnut door and the
+ * espresso window frames. Picking one of the other five would have meant
+ * importing a hue the footage does not contain — the emerald and the burgundy
+ * in particular, since the film has no red at all below hue 30 and its only
+ * green is the far softer kitchen sage.
+ *
+ * Measured on the back face: the figure holds 16.5:1, the label 12.9:1, the
+ * note 6.6:1, and the brass edge 7.4:1. (`--primary` was the first choice for
+ * that edge and measured 2.94:1 against this fill, under the 3:1 a UI border
+ * needs, so the edge is `--gold`.)
+ *
+ * Why 180deg and two faces
+ * ------------------------
+ * The first version turned a single element 360deg. That is one rotation but
+ * TWO flips to look at: the card goes edge-on at 90deg and again at 270deg, so
+ * it collapses and reopens twice. Half of it is also spent looking at the back
+ * of the card, with the figures mirrored.
+ *
+ * A single flip is 180deg — one edge-on pass — but a lone element ends that
+ * turn face-down. So the card has a real back: two faces, the rear one built
+ * pre-turned by 180deg, each hiding its own reverse. The turn stops halfway,
+ * and what it stops on is a face that was always the right way up.
+ *
+ * Mechanics worth keeping straight:
+ *
+ *  - **`perspective` on the row, not the card.** Without it `rotateX` is an
+ *    orthographic squash — the card flattens to a line with no depth. On
+ *    `.stats` so all four share one vanishing point and the row turns like one
+ *    object.
+ *  - **The resting angle is declared.** `rotate: x 0deg` looks redundant and is
+ *    load-bearing: a transition from *unset* interpolates matrices instead of
+ *    the angle, and the card sits there doing nothing.
+ *  - **`rotate`, not `transform: rotateX()`.** `transform` is already spoken
+ *    for by the entrance slide in `.reveal > *`; taking it here would cancel
+ *    the stagger on exactly these cards.
+ *  - **The front face stays in flow.** It is what gives the card its height;
+ *    the back is absolutely positioned over it. Two absolute faces would
+ *    collapse the grid row to nothing.
+ */
+.stats {
+  perspective: 900px;
+}
+
+.stats > .stat {
+  transform-style: preserve-3d;
+  rotate: x 0deg;
+  transition:
+    opacity 620ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 620ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    rotate 700ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/**
+ * The two faces, held 1px apart in z.
+ *
+ * `backface-visibility` alone is not enough, and the reason is worth writing
+ * down. Left at their natural depth the faces are COPLANAR — both at z = 0 —
+ * and a 3D rendering context has no stable way to order two surfaces occupying
+ * the same plane. Measured: the resting states were correct (0deg showed the
+ * front, 180deg the back) while both mid-turn states showed the wrong face.
+ * Pushing them 1px apart gives the sort something to sort by.
+ *
+ * `transform`, not the independent `translate`/`rotate` properties, and only
+ * here. Independent properties apply in a fixed order — translate, then rotate
+ * — so a back face written that way is pushed +z and THEN flipped, which lands
+ * it behind the front instead of in front of it. `transform` lets the
+ * translation happen after the rotation, in the face's own flipped space, which
+ * is the only order that works. (`transform` is free on the faces; the entrance
+ * slide in `.reveal > *` claims it on `.stat`, their parent, not on them.)
+ */
+.stat__face {
+  backface-visibility: hidden;
+  /* Safari still wants the prefix, and without it both faces paint at once and
+     the card reads as a smear rather than a turn. */
+  -webkit-backface-visibility: hidden;
+}
+
+/**
+ * The front face is POSITIONED, not static, and that is the fix rather than a
+ * detail.
+ *
+ * It stays in flow so it can give the card its height — two absolutely
+ * positioned faces would collapse the grid row to nothing — but `position:
+ * relative` puts it in the same class of box as the back. Left static it was
+ * the only non-positioned child of a `preserve-3d` parent, and a 3D context
+ * sorts its children by depth while paint order sorts positioned above
+ * non-positioned. With the two rules disagreeing the wrong face won at some
+ * angles: measured across the arc, the resting states were always right and the
+ * mid-turn ones were not.
+ */
+.stat__face--front {
+  position: relative;
+  transform: translateZ(1px);
+}
+
+.stat__face--back {
+  position: absolute;
+  inset: 0;
+  transform: rotateX(180deg) translateZ(1px);
+  background: var(--dark);
+  border-color: var(--gold);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stat__face--back .stat__value,
+.stat__face--back .stat__label {
+  color: var(--bg);
+}
+
+.stat__face--back .stat__note {
+  color: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+
+.stats > .stat:hover,
+.stats > .stat:focus-visible {
+  rotate: x 180deg;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats {
+    perspective: none;
+  }
+
+  .stats > .stat:hover,
+  .stats > .stat:focus-visible {
+    /* No turn. The colour still changes, because that is the state — it just
+       arrives on the front face instead of by turning to the back one. */
+    rotate: none;
+  }
+
+  .stats > .stat:hover .stat__face--front,
+  .stats > .stat:focus-visible .stat__face--front {
+    background: var(--dark);
+    border-color: var(--gold);
+  }
+
+  .stats > .stat:hover .stat__face--front .stat__value,
+  .stats > .stat:hover .stat__face--front .stat__label,
+  .stats > .stat:focus-visible .stat__face--front .stat__value,
+  .stats > .stat:focus-visible .stat__face--front .stat__label {
+    color: var(--bg);
+  }
+
+  .stats > .stat:hover .stat__face--front .stat__note,
+  .stats > .stat:focus-visible .stat__face--front .stat__note {
+    color: color-mix(in srgb, var(--bg) 70%, transparent);
+  }
+}
+
+/* --------------------------------------------------------------- the drift
+ *
+ * A slow vertical parallax on section imagery, tied to scroll position.
+ *
+ * This is the deliberate echo of the film: the walkthrough is a forward dolly,
+ * and giving the stills a little travel against their frames is the flat-page
+ * version of the same movement. It is small on purpose — 4% — because the point
+ * is depth, not the effect.
+ *
+ * `scale(1.1)` is load-bearing, not styling. It oversizes the image so that a
+ * 4% drift in either direction never reaches the edge of its frame; it is also
+ * what makes the failure case safe, since an image whose timeline never
+ * resolves sits at one end of the range and still covers.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .media img,
+    .split__media img,
+    .figure img {
+      animation: motion-drift linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+
+    @keyframes motion-drift {
+      from {
+        transform: scale(1.1) translateY(-4%);
+      }
+      to {
+        transform: scale(1.1) translateY(4%);
+      }
+    }
+
+    /* A stacked card is already inside a `scale()` written by CardStack, and
+       a drift timeline here would fight it. */
+    .cardstack__card img {
+      animation: none;
+      transform: none;
+    }
+  }
+}
+
+/* ------------------------------------------------------- the progress rule
+ *
+ * A hairline under the header that fills with how far down the document you
+ * are.
+ *
+ * This is the through-line to the home page: the film measures your scroll and
+ * shows it back to you, and on the reading pages the same instrument measures
+ * the document. It is the one piece of interface both halves of the site share.
+ *
+ * `--scroll-progress` is written by `useScrollProgress`, not by a `scroll()`
+ * timeline, and that is a concession made on evidence. The timeline version
+ * needs `overflow-x: hidden` off the root to resolve, and the `view()` timelines
+ * above need it ON the root — the two want opposite configurations of the same
+ * property. The hook costs one rAF-coalesced custom-property write per scroll
+ * frame, on a page whose sibling runs a video scrub in the same loop.
+ */
+.scroll-rule {
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  z-index: 29;
+  width: 100%;
+  height: 2px;
+  /* `scaleX` from a left origin: compositor-only, so the rule costs nothing per
+     frame however long the document is. */
+  transform-origin: 0 50%;
+  transform: scaleX(var(--scroll-progress, 0));
+  background: var(--primary);
+  pointer-events: none;
+}
+
+/* On the home page the film IS the progress, and a second indicator over it is
+   the same number said twice. */
+body:has(.film) .scroll-rule {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal > *,
+  .partners,
+  .promises {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .scroll-rule {
+    display: none;
+  }
+}

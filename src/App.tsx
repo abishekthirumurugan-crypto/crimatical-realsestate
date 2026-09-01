@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
 
 import SiteHeader from './components/SiteHeader';
+import { useScrollProgress } from './hooks/useScrollProgress';
+import { useCardFocus } from './hooks/useCardFocus';
 import SiteFooter from './components/SiteFooter';
 import FloatingActions from './components/FloatingActions';
+import EnquiryDialog from './components/EnquiryDialog';
 import { RouterProvider, useRoute } from './lib/router';
 import { COMPANY, findPost } from './content/site';
 
@@ -22,6 +25,10 @@ import './styles/sections.css';
 import './styles/pages.css';
 import './styles/actions.css';
 import './styles/elevation.css';
+import './styles/motion.css';
+// Last, so the raised-card state can outrank the hover states the two files
+// above give the same cards. See the note at the top of focus.css.
+import './styles/focus.css';
 
 const BLOG_PREFIX = '/blog/';
 const PROJECT_TITLE = `${COMPANY.name} Block A`;
@@ -70,18 +77,51 @@ function Routes() {
   return element;
 }
 
-export default function App() {
+/**
+ * Everything outside the routed page.
+ *
+ * Inside `RouterProvider` rather than wrapping it, because the scroll-progress
+ * rule has to know whether this is the film route to skip its own work there.
+ */
+function Shell() {
+  const route = useRoute();
+  const isFilm = route === '/' || route === '/index.html';
+
+  useScrollProgress(!isFilm);
+  // Hover a grid card and it rises to the centre of the screen. One delegated
+  // listener for every card on the site rather than a handler per card.
+  useCardFocus();
+
   return (
-    <RouterProvider>
+    <>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
+      {/* The dimmer behind a raised card. Rendered once and always, because it
+          transitions its opacity — mounting it on demand would have nothing to
+          transition from. */}
+      <div className="card-focus-scrim" aria-hidden="true" />
       <SiteHeader />
+      {/* Fills with how far down the document you are. Hidden on the home page,
+          where the film already measures the same scroll. See motion.css. */}
+      <div className="scroll-rule" aria-hidden="true" />
       <main id="main">
         <Routes />
       </main>
       <SiteFooter />
       <FloatingActions />
+      {/* Mounted once for the whole site. It is an empty `<dialog>` until
+          something calls `openEnquiry()`, and the Sell.Do script is not
+          fetched until the first time it opens. */}
+      <EnquiryDialog />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <RouterProvider>
+      <Shell />
     </RouterProvider>
   );
 }

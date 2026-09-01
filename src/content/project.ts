@@ -5,14 +5,85 @@
  * components read everything from this file and nothing is hard-coded in JSX.
  */
 
+/**
+ * A beat of the home-page film.
+ *
+ * The film is a single forward dolly through a finished apartment — street,
+ * gate, hall, bedroom, kitchen, terrace — so its beats are SPACES, not dates.
+ * That is why this is a separate export from `PHASES` below rather than a
+ * rename of it: `PHASES` is the thirty-month construction programme and it is
+ * still exactly right on `/details`, where the build log lives. The two
+ * describe the same building at different times and neither stands in for the
+ * other.
+ *
+ * Keep `body` to two lines. It is set over moving picture, and the scrim that
+ * makes it legible is sized to a block this tall — a third line pushes the copy
+ * up out of the dark part of the gradient.
+ */
+export interface WalkthroughSpace {
+  /**
+   * Position in the film, 0–1. Must be ascending.
+   *
+   * Five beats across ten seconds, so roughly two seconds each — but snapped to
+   * the cuts rather than spaced exactly. The camera holds three full seconds in
+   * the bedroom and passes the entrance in under one and a half, so an exact
+   * two-second split would have named the living room over a shot of a bed.
+   */
+  at: number;
+  /** The space you are in. Short — it is set large. */
+  name: string;
+  /** Two lines. Concrete nouns and real numbers, no salesmanship. */
+  body: string;
+}
+
+/**
+ * Timings read off the cut, sampled every half second from the encode itself:
+ * 0.0–1.2s the facade, 1.2–2.2s the glazed threshold, 2.2–4.2s the living room,
+ * 4.2–6.8s the stair hall, 6.8–8.2s the bedroom, 8.2–10s the kitchen.
+ *
+ * These moved when the film was replaced. The previous cut ran gate → door →
+ * hall → bedroom → kitchen with the bedroom on a long three-second hold in the
+ * middle; this one spends that hold on a stair the old film did not have, which
+ * pushes the bedroom and the kitchen most of a beat later each. A label that
+ * does not move with the cut names the wrong room, and on this page that is the
+ * one mistake the overlay can make.
+ */
+export const SPACES: WalkthroughSpace[] = [
+  {
+    at: 0,
+    name: 'The approach',
+    body: 'Eighteen metres of frontage. The uplighters run on a photocell rather than a timer.',
+  },
+  {
+    at: 0.16,
+    name: 'The entrance',
+    body: 'Walnut on a concealed pivot, 2.4 m tall. The grain is book-matched across both leaves.',
+  },
+  {
+    at: 0.32,
+    name: 'The living room',
+    body: 'Glazed on two sides, 3.0 m to the soffit. The marble runs in one direction throughout.',
+  },
+  {
+    at: 0.7,
+    name: 'The principal bedroom',
+    body: 'East light, with the walk-in behind the headboard wall. Carpet sits on the slab, not on battens.',
+  },
+  {
+    at: 0.86,
+    name: 'The kitchen',
+    body: 'Sage lacquer and honed quartz, appliances behind the tall run. Past it, the sixth-floor terrace.',
+  },
+];
+
 export interface BuildPhase {
   /**
-   * Position in the film, 0–1. Must be ascending. Drives the survey rule.
+   * Position in the old construction film, 0–1.
    *
-   * Read off the film, not spaced evenly. The current cut spends its first 42%
-   * on the plot, the dig and the footings and then puts the frame up quickly,
-   * so an even six-way split had the copy describing a mid-rise while the
-   * screen still showed a hole in the ground.
+   * Vestigial. The home-page film is a walkthrough now and takes its beats from
+   * `SPACES` above; nothing reads this any more. Kept because the ordering it
+   * encodes is the programme order, which `/details` renders, and because a
+   * future cut of the build film would want it back.
    */
   at: number;
   /** Short stage name, as it appears on a construction programme. */
@@ -188,7 +259,7 @@ export const PROJECT = {
   name: 'Block A',
   plot: 'Plot 7',
   district: 'Perungudi, Chennai',
-  /** Sits under the film, once the build has finished on screen. */
+  /** Used on `/details`. The home page is the film and carries no prose. */
   statement:
     'Thirty months from a fenced-off plot of graded earth to a lit hallway. This is the whole of it, in order, at whatever speed you scroll.',
 } as const;

@@ -223,7 +223,7 @@ export const POSTS: Post[] = [
   },
   {
     slug: 'three-metre-ceilings',
-    title: 'The argument for three-metre ceilings',
+    title: 'The argument for three metre ceilings',
     excerpt:
       'It costs about 4% more per floor and it is the first thing value engineering comes for. We have lost this fight twice and won it seven times.',
     category: 'Design',
@@ -401,7 +401,7 @@ export const SERVICES: Service[] = [
   {
     icon: 'retrofit',
     title: 'Renovation and retrofit',
-    body: 'Structural repair, waterproofing and modernisation of existing buildings — including several we did not build, which is a harder job.',
+    body: 'Structural repair, waterproofing and modernisation of existing buildings including several we did not build, which is a harder job.',
     covers: ['Structural repair', 'Waterproofing', 'Services', 'Modernisation'],
   },
 ];

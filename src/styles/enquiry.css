@@ -1,0 +1,176 @@
+/**
+ * The enquiry popup.
+ *
+ * A native `<dialog>`, so there is no z-index here and nothing to keep in step
+ * with the ladder in the rest of the stylesheets: `showModal()` puts it in the
+ * browser's top layer, which is above every stacking context on the page by
+ * definition — the header, the floating rail, the card-focus scrim, all of it.
+ */
+
+.enquiry {
+  /* A dialog's default box is `fit-content` centred by auto margins. The width
+     is capped rather than set, so a narrow phone gets the gutters instead. */
+  width: min(34rem, calc(100vw - 2rem));
+  max-height: min(46rem, calc(100dvh - 2rem));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--muted);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+/* `dvh` above and here: on a phone the popup should fit the space that is
+   actually visible, which `vh` — the LARGE viewport, URL bar ignored — does
+   not describe. Static `vh` would run the form under the browser chrome. */
+@supports not (height: 100dvh) {
+  .enquiry {
+    max-height: calc(100vh - 2rem);
+  }
+}
+
+.enquiry::backdrop {
+  /* The same warm wash the card focus uses, a shade deeper because this one is
+     modal and the page behind it is genuinely out of reach. */
+  background: hsl(28deg 30% 14% / 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+/* Entrance. `allow-discrete` is what lets a display:none -> block element
+   animate at all; without it the popup would simply appear. */
+@media (prefers-reduced-motion: no-preference) {
+  .enquiry,
+  .enquiry::backdrop {
+    transition:
+      opacity 240ms ease,
+      transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      overlay 240ms allow-discrete,
+      display 240ms allow-discrete;
+  }
+
+  .enquiry {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+
+  .enquiry[open] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* The starting frame, which has to be declared separately: an element that
+     was `display: none` has no previous value to transition from. */
+  @starting-style {
+    .enquiry[open] {
+      opacity: 0;
+      transform: translateY(0.75rem) scale(0.98);
+    }
+  }
+
+  .enquiry::backdrop {
+    opacity: 0;
+  }
+
+  .enquiry[open]::backdrop {
+    opacity: 1;
+  }
+
+  @starting-style {
+    .enquiry[open]::backdrop {
+      opacity: 0;
+    }
+  }
+}
+
+.enquiry__panel {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+}
+
+.enquiry__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.35rem 1.4rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.enquiry__title {
+  margin: 0.45rem 0 0;
+  font-size: var(--h4);
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.enquiry__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease;
+}
+
+.enquiry__close:hover {
+  background: var(--primary-tint);
+  border-color: var(--primary-tint);
+  color: var(--primary-ink);
+}
+
+.enquiry__body {
+  padding: 1.25rem 1.4rem 1.4rem;
+  overflow-y: auto;
+}
+
+.enquiry__note {
+  margin: 0 0 0.75rem;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.enquiry__note--error {
+  color: var(--ink);
+}
+
+/**
+ * The Sell.Do form draws itself in here and brings its own markup, which this
+ * site has no say over. So the rules below are the few that can be applied
+ * from outside without guessing at their class names: make the controls fill
+ * the width, and let them inherit the page's typeface instead of the vendor
+ * default. Anything finer than this belongs in the Sell.Do form builder, where
+ * it will survive their next release.
+ */
+.enquiry__form {
+  font-family: var(--font);
+  font-size: var(--text-sm);
+}
+
+.enquiry__form :is(input, select, textarea, button) {
+  font-family: inherit;
+  max-width: 100%;
+}
+
+.enquiry__form :is(input, select, textarea) {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* The page must not scroll behind a modal. `html`, not `body` — see the note
+   in the component. */
+.has-modal {
+  overflow: hidden;
+}

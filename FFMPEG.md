@@ -38,54 +38,140 @@ for **+17 %** on disk (2.58 MiB → 3.03 MiB).
 
 ## The film currently shipped
 
-`realestate-upscaled.mp4` — 2560×1440, 24 fps, 10.00 s, 240 frames, 9.96 Mbps,
-**12.0 MiB**, `has_b_frames=0`, keyframes every 60 frames, no audio.
+`new_realestate_video.mp4` — 2560×1440, 24 fps, 10.000 s, 240 frames, 12,041 KiB,
+`yuvj420p` (full range), `has_b_frames=0`, keyframes every 60, **plus an AAC-LC
+48 kHz stereo 128 kbps track**. It is a single continuous forward dolly through a
+finished apartment: street, gate, hall, bedroom, kitchen, terrace. Mean absolute
+inter-frame delta is 28.8/255 — an order more motion than the CGI cut it replaced.
 
 ```bash
-CURVE="curves=r='0/0 0.22/0.22 0.50/0.60 0.7255/0.9647 1/1':g='0/0 0.22/0.22 0.50/0.60 0.7255/0.9647 1/1':b='0/0 0.22/0.22 0.50/0.60 0.7333/0.9647 1/1'"
-
-./scripts/encode-scrub.sh -i realestate-upscaled.mp4 -o public/video/tower        -w 1280 -f 24 -p "$CURVE"
-./scripts/encode-scrub.sh -i realestate-upscaled.mp4 -o public/video/tower-mobile -w  720 -f 24 -p "$CURVE"
+./scripts/encode-scrub.sh -i new_realestate_video.mp4 -o public/video/walkthrough        -w 1280 -c 29 -f 24 -e veryslow
+./scripts/encode-scrub.sh -i new_realestate_video.mp4 -o public/video/walkthrough-mobile -w  960 -c 31 -f 24 -e veryslow
 ```
 
-Or just `npm run encode`, which carries the same curve.
+Or `npm run encode`, which runs both.
 
-Shipped result: **1280×720, 24 fps, 240 frames, max GOP 10, no B-frames, 1194 KiB.**
-The 720px mobile cut is 549 KiB.
+Shipped: **1280×720, GOP 10, no B-frames, no audio, 2030 KiB, VMAF 92.44** at a
+1920×1080 viewport. The mobile cut is **960×540, 1106 KiB, VMAF 87.87** at
+1170×658 (390 CSS px at DPR 3).
 
-### The tone curve, and why it is not optional
+### What the sweep actually found
 
-The master renders its building on a **mid-grey studio sweep**, measured at
-rgb(185, 185, 187) across the frame edges. That is a problem the CSS cannot
-solve. The page is near-white, so a `contain` fit puts a grey rectangle on it
-with a hard edge; and the building's own lit concrete measures the same tone as
-the sweep, so no clamp, key or blend separates the two.
+34 encodes, scored with VMAF at real viewport sizes rather than by eye.
 
-The curve fixes it at the source. It is a shoulder, not a brightness lift:
-the bottom quarter is left alone (`0.22/0.22`), the mid-tones are lifted gently
-(`0.50/0.60`), and the backdrop's own value is mapped to just under white
-(`0.7255/0.9647`). Blue gets its own slightly different input point because the
-sweep is a shade cool and a single master curve would have carried that cast
-into the highlights.
+**GOP 10 survives this footage.** The worry was that so much inter-frame motion
+would defeat `-sc_threshold 0` and let x264 insert its own keyframes. It did not:
+every output returned `maxgap == mingap == requested`, with exactly `240/GOP`
+keyframes. GOP 10 is still the knee — stretching to 16 saves 116 KiB (5.4%) and
+raises worst-case backward-seek work 67% (9 → 15 decodes); 16 → 24 saves a
+derisory 43 KiB for another 53%. Keyframes are relatively cheap here: the I:P byte
+ratio is 2.76× on this footage against 6.01× on the CGI.
 
-Measured on the output, over six frames spanning the film:
+**`-preset veryslow` is free.** 2030 KiB at VMAF 92.44 against `slow`'s 2165 KiB
+at 92.23 — 6.2% smaller *and* very slightly better. It is paid once, at build.
+
+**CRF 29 is the last rung above VMAF 90**, and the cliff is immediately below it:
+
+| CRF (veryslow, GOP 10, 1280) | Size | SSIM-Y | VMAF |
+|-----:|-----:|-------:|-----:|
+| 26 | 2722 KiB | 0.9821 | 97.54 |
+| **29** | **2030 KiB** | **0.9746** | **92.44** |
+| 30 | 1842 KiB | 0.9713 | 90.07 |
+| 31 | 1676 KiB | 0.9676 | 87.33 |
+| 32 | 1525 KiB | 0.9634 | 84.39 |
+
+**No prefilter, and that is measured.** Denoising dark photographic footage
+sounds right and is wrong: `hqdn3d` at three strengths saved 2.7–3.5% while
+costing 2.4–8.2 VMAF. Raising CRF one step saves more (6.5%) for less loss
+(−2.37). `smartblur` produced a *larger* file. The tone curve documented below
+for the old master has nothing to attach to here — it exists to map a flat
+studio sweep onto `--bg`, and this is a full-frame interior with no backdrop.
+
+**Rejected levers.** Frame rate is weak (CRF is a per-frame target, so survivors
+absorb the bits): 12 fps saves only 17% while halving scrub smoothness.
+`aq-mode=3` loses at matched bytes — 1701 KiB / 84.57 against plain AQ at
+1676 KiB / 87.33.
+
+**The mobile cut is cropped to portrait, 480×854.**
+
+It was 960×540 — the same landscape framing as the desktop file, just smaller —
+and that was wrong twice over. The player uses `object-fit: cover`, so on a
+390×844 phone a 16:9 frame is scaled 1.56× to cover the screen and then cropped
+to the middle 26% of its width. The decoder was decoding a full frame and
+**74% of every one of them was thrown away**, while the strip that survived was
+upscaled 4.69× from 250 source pixels across 1,170 device pixels.
+
+Cropping the master to 9:16 first fixes both ends of that at once:
 
 | | before | after |
 |---|---:|---:|
-| frame-edge median | #b8b8bb | **#f4f4f6** |
-| contrast against the `#f6f6f6` page | 1.41 | **1.01** |
-| body copy over the gutter columns, worst frame | 2.64:1 | **5.61:1** |
+| encode | 960×540, GOP 10 | **480×854, GOP 2** |
+| pixels decoded per frame | 518k | **409k** (−21%) |
+| fraction of the frame visible | 26% | **82%** |
+| upscale on a DPR-3 phone | 4.69× | **2.96×** |
+| worst-case decode per seek | 9 frames | **1 frame** |
+| file | 1106 KiB | 1218 KiB (+10%) |
 
-At 1.01 the letterbox around the frame is indistinguishable from the frame
-itself, which is what lets the film be full-bleed with no visible edge anywhere.
-The building keeps its modelling — the curve costs about 7% on disk
-(1110 → 1194 KiB) and nothing in quality.
+Cheaper to decode, far cheaper to seek, and sharper, for 10% more bytes. The
+crop is centred and keeps every
+beat of the walk — gate, door, hall, bedroom, kitchen, terrace — because the
+camera is a forward dolly and the subject is always near the middle.
 
-The one thing the curve does not reach is the building's **cast shadow**, which
-runs off the right-hand edge of the frame from about halfway through. That is
-handled in CSS, by `.film__wash` in `src/styles/film.css`.
+**Audio.** The source carries a 128 kbps AAC track; `-an` drops it, verified as
+0 audio streams in every output. On a scrubber the element is never played, and
+it would have added ~160 KiB to a file that already has a budget to watch.
 
-If you swap the master for footage already shot on white, drop the `-p` flag.
+### Scrubbing is seek-bound on a phone
+
+Worth writing down, because it is not obvious and it is what "the video lags"
+actually means.
+
+The film spans `scrollLengthVh` × viewport of scroll. On a 390×844 phone at six
+screens that is 5,064px, so at 24 fps a distinct frame lands every 21px — and an
+ordinary flick of 1,800px in 450ms asks for **190 seeks a second**. Nothing on a
+phone is close to that. `ScrollVideo` gates seeks on decoder readiness, so the
+excess is dropped rather than queued, and what the reader feels is the picture
+trailing their finger.
+
+The first attempt at this was a coarser frame grid on mobile — 12 fps rather
+than 24, halving the demand to 95/s. It worked and it was the wrong trade: 42px
+of scroll per frame is visible stepping at slow speeds, so trailing was simply
+swapped for juddering.
+
+**The right lever is GOP, not frame rate.** Seek cost is dominated by how many
+frames the decoder must run through from the last keyframe, and the mobile cut
+was inheriting the desktop's GOP 10:
+
+| GOP | size | worst-case decode per seek |
+|---:|---:|---:|
+| 10 | 796 KiB | 9 frames |
+| 5 | 904 KiB | 4 frames |
+| **2** | **1218 KiB** | **1 frame** |
+| 1 | 1434 KiB | 0 frames |
+
+GOP 2 makes a seek roughly nine times cheaper for 422 KiB, which on a scrubber
+is exactly the right place to spend bytes — and it buys back far more headroom
+than a 24 fps grid costs, so the grid goes back to matching the encode and the
+stepping disappears. GOP 1 was measured too; the extra 216 KiB removes a single
+P-frame decode and is not worth it.
+
+This is the one place the general advice in **Don't reach for all-intra** below
+bends: that section is about the desktop file, where bytes are the scarce
+resource. On the mobile cut the scarce resource is seek time.
+
+`src/pages/Home.tsx` still runs a snappier ease on mobile, since smoothing is a
+deliberate lag and a phone has less headroom to hide one in.
+
+### The budget, honestly
+
+`ScrollVideo` uses `preloadStrategy: 'blob'`, so the **whole file gates first
+interaction**. 2030 KiB is about 4 s on 4 Mbps. The determinate progress bar
+covers it, but if that needs to come down, the lever is the edit rather than the
+encoder: the camera dwells three of its ten seconds in the bedroom, and trimming
+two of them gives an 8 s cut at **1576 KiB and VMAF 92.64** — same quality per
+frame, 22% fewer bytes. Two seconds of trim is worth about three CRF steps.
+
+---
 
 ---
 

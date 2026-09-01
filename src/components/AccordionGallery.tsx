@@ -57,11 +57,29 @@ interface AccordionGalleryProps {
   className?: string;
 }
 
+/**
+ * Below this width the stylesheet stacks the panels into a column, and the
+ * component has to know it: the layout maths grows panels along one axis, and
+ * once stacked that axis is the container's height, not its width. Keep this
+ * in step with the media query in AccordionGallery.css.
+ */
+const STACK_QUERY = '(max-width: 520px)';
+
+/**
+ * Floor on `expandRatio` while stacked. At the 0.5 the details page passes in,
+ * an open panel is only three times the height of a closed one, which on a
+ * phone reads as four strips rather than one photograph over three thumbnails.
+ */
+const STACKED_EXPAND_RATIO = 0.62;
+
 export default function AccordionGallery({
   items,
   defaultIndex = 2,
-  accentColor = '#ffffff',
-  overlayColor = '#060010',
+  // Defaults follow the stylesheet, which reads the palette. Upstream's are a
+  // white accent over a purple-black dim; neither exists in this palette, and a
+  // default is what the next use of this component inherits.
+  accentColor = 'var(--primary-on-dark)',
+  overlayColor = 'var(--dark-deep)',
   textColor = '#ffffff',
   height = 460,
   gap = 10,
@@ -88,9 +106,22 @@ export default function AccordionGallery({
   const firstRunRef = useRef(true);
   const mediaSizeRef = useRef(320);
 
-  const vertical = orientation === 'vertical';
   const count = items.length;
   const [active, setActive] = useState(Math.min(Math.max(defaultIndex, 0), count - 1));
+  // Read at first render, not in an effect, so the opening layout is already
+  // the right one — measuring a row and then a column shows as a jump.
+  const [stacked, setStacked] = useState(
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia(STACK_QUERY).matches
+      : false,
+  );
+
+  // Stacked and `orientation="vertical"` are one layout to everything below.
+  const vertical = orientation === 'vertical' || stacked;
+  const ratio = Math.min(
+    Math.max(stacked ? Math.max(expandRatio, STACKED_EXPAND_RATIO) : expandRatio, 0.2),
+    0.9,
+  );
 
   const prefersReduced =
     typeof window !== 'undefined' && window.matchMedia
@@ -102,8 +133,7 @@ export default function AccordionGallery({
       const panels = panelRefs.current;
       if (!panels.length) return;
 
-      const r = Math.min(Math.max(expandRatio, 0.2), 0.9);
-      const grow = count > 1 ? (r * (count - 1)) / (1 - r) : 1;
+      const grow = count > 1 ? (ratio * (count - 1)) / (1 - ratio) : 1;
       const mediaSize = mediaSizeRef.current;
 
       tlRef.current?.kill();
@@ -160,7 +190,7 @@ export default function AccordionGallery({
     [
       active,
       count,
-      expandRatio,
+      ratio,
       duration,
       ease,
       vertical,
@@ -175,6 +205,15 @@ export default function AccordionGallery({
   );
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia(STACK_QUERY);
+    const sync = () => setStacked(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
 
@@ -182,7 +221,7 @@ export default function AccordionGallery({
       const rect = el.getBoundingClientRect();
       const total = vertical ? rect.height : rect.width;
       const usable = Math.max(total - gap * (count - 1), 120);
-      const size = Math.max(140, usable * Math.min(Math.max(expandRatio, 0.2), 0.9) * 1.22);
+      const size = Math.max(140, usable * ratio * 1.22);
       mediaSizeRef.current = size;
       el.style.setProperty('--ag-media-size', `${size}px`);
       applyLayout(!firstRunRef.current);
@@ -192,7 +231,7 @@ export default function AccordionGallery({
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [applyLayout, gap, count, expandRatio, vertical]);
+  }, [applyLayout, gap, count, ratio, vertical]);
 
   useEffect(() => {
     applyLayout(!firstRunRef.current);
@@ -233,7 +272,10 @@ export default function AccordionGallery({
     '--ag-text': textColor,
     '--ag-gap': `${gap}px`,
     '--ag-radius': `${radius}px`,
-    height: vertical ? `${Math.round(height * 1.6)}px` : `${height}px`,
+    // Stacked, the stylesheet owns the height: a desktop `height` prop laid
+    // down the screen would either overflow the viewport or, as `auto`, leave
+    // flex-grow nothing to hand the open panel.
+    height: stacked ? undefined : vertical ? `${Math.round(height * 1.6)}px` : `${height}px`,
   } as CSSProperties;
 
   return (

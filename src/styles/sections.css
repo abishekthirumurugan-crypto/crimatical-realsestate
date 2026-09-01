@@ -84,7 +84,13 @@
   gap: 1rem;
 }
 
+/* The card is now only the thing that turns; the surface lives on its faces. */
 .stat {
+  position: relative;
+  border-radius: var(--radius);
+}
+
+.stat__face {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -211,7 +217,8 @@
   transition:
     opacity 620ms cubic-bezier(0.22, 0.61, 0.36, 1) calc(var(--spec-i, 0) * 90ms),
     transform 620ms cubic-bezier(0.22, 0.61, 0.36, 1) calc(var(--spec-i, 0) * 90ms),
-    border-color 240ms ease;
+    border-color 240ms ease,
+    background-color 240ms ease;
 }
 
 .spec[data-shown='true'] .spec-card {
@@ -570,7 +577,8 @@
   padding: 0.8rem 0.8rem 1.15rem;
   transition:
     transform 220ms ease,
-    border-color 220ms ease;
+    border-color 220ms ease,
+    background-color 220ms ease;
 }
 
 .unit:hover {
@@ -589,7 +597,7 @@
   border-radius: calc(var(--radius) - 4px);
   background: var(--bg);
   /* The plan inherits this as its stroke. */
-  color: var(--navy);
+  color: var(--dark);
 }
 
 .unit__left {
@@ -740,6 +748,19 @@
   border-color: var(--primary);
 }
 
+/* Same rule as the floating rail's disc: this one opens the enquiry popup, so
+   it is a <button> wearing a link's clothes. `border-bottom` is the rule under
+   the label and is set by `.unit__cta` itself — only the other three sides are
+   cleared here. */
+button.unit__cta {
+  font: inherit;
+  background: none;
+  border-inline: 0;
+  border-top: 0;
+  padding-inline: 0;
+  cursor: pointer;
+}
+
 /* --------------------------------------------------------------- services
  *
  * Icon and index in the header, then the claim, then what it actually covers.
@@ -762,7 +783,8 @@
   padding: 1.35rem 1.3rem 1.3rem;
   transition:
     transform 220ms ease,
-    border-color 220ms ease;
+    border-color 220ms ease,
+    background-color 220ms ease;
 }
 
 .service:hover {
@@ -901,7 +923,7 @@
   width: 2.6rem;
   height: 2.6rem;
   border-radius: 50%;
-  background: var(--navy);
+  background: var(--dark);
   color: #fff;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -969,7 +991,7 @@
 /* -------------------------------------------------------------- CTA panel */
 
 .panel {
-  background: var(--navy);
+  background: var(--dark);
   border-radius: var(--radius-lg);
   padding: clamp(1.75rem, 3.2vw, 2.75rem);
   color: rgba(255, 255, 255, 0.75);
@@ -1024,59 +1046,80 @@
 /* ------------------------------------------------------- stacked build log */
 
 /*
- * The six stages as a ScrollStack. Each card pins near the top of the viewport
- * and the next rides up over it, so the deck assembles as you read down.
+ * The six stages: a deck on a desktop, where each card pins near the top of the
+ * viewport and the next rides up over it, and a plain list on a phone.
+ * `CardStack` is what switches between the two.
  *
- * Two things this layout has to respect that an ordinary card does not:
+ * Two things the deck has to respect that an ordinary card does not:
  *
  *  - The cards must be OPAQUE. Everything else on this page takes `--glass`
  *    from elevation.css — rgba(255,255,255,0.55) — which is fine over a page
  *    but wrong over other cards: five stages would show through the top one.
- *  - They must be a FIXED height. The stack offsets each card by a constant
- *    26px, so ragged heights make the peeking edges uneven down the deck.
+ *  - Ragged heights show. Each card is offset by a constant 26px and scaled a
+ *    shade smaller than the one above it, so a card more than ~26px taller
+ *    than its successor hangs out below it. A fixed 16.5rem down to 46rem
+ *    settles that. The deck starts at 40rem, so there is a 6rem band where the
+ *    cards have gone auto and the deck is still running; the scale ramp absorbs
+ *    the difference across it.
  */
 
-/*
- * Runway, and it has to go here rather than on the section.
- *
- * The stack releases at `endElementTop - viewportHeight / 2`, measured from
- * the end spacer. The spacer is the last child, so padding under the stack
- * sits BELOW it and moves that release point not at all — the deck would
- * finish assembling and start leaving in the same breath. Space above the
- * spacer is what buys the assembled deck time on screen.
- */
-.stage-stack .scroll-stack-end {
-  margin-top: 60vh;
+/* Phone spacing, and the gap the deck ignores: stacked, this grid holds a
+   single child and CardStack sets its own spacing between the cards. */
+.stage-list {
+  display: grid;
+  gap: 1.25rem;
 }
 
 /*
- * Clearance for the next section.
+ * The deck's own figures, which live here rather than on the component because
+ * they are the one deck that has to differ between the two widths.
  *
- * A pinned card is moved by `transform: translate3d`, which paints it lower
- * without making the section any taller — so once the deck freezes it hangs
- * below its own layout box and lands on whatever follows. The overhang is
- * exactly:
+ * Six cards deep rather than three or four, so it is given more room between
+ * them, a slightly wider peek to count them by, and a longer runway before it
+ * reads as assembled and leaves.
  *
- *   pinEnd + stackPosition + itemStackDistance x (n - 1) + cardHeight - endTop
- *   = (18% - 50%) x viewport + 26px x 5 + 16.5rem
- *   = 24.6rem - 32vh
+ * The clearance that used to sit under this — a hand-worked `28.6rem - 32vh`
+ * for the overhang a JS-pinned deck leaves below its own layout box — is gone
+ * entirely. A sticky box cannot be painted outside its containing block, so
+ * there is no overhang to clear.
  *
- * which is ~50px on a tall desktop window and ~170px on a short laptop one —
- * either way more than `--section-y` covers. The 4rem is the gap that is
- * actually visible; the rest is paying off the overhang.
+ * Two classes, so this cannot lose to CardStack.css's own defaults whichever
+ * way round the two stylesheets land.
  */
-.stage-stack {
-  padding-bottom: max(4rem, calc(28.6rem - 32vh));
+.cardstack.stage-stack {
+  --stack-gap: 120px;
+  --stack-peek: 26px;
+  --stack-tail: 40vh;
 }
 
-.scroll-stack-card.stage-card {
+/*
+ * The phone's share of the same three figures, at the width where the card
+ * turns into an image over a paragraph.
+ *
+ * Measured: a stage card is 264px on a desk and 396px on a phone — half the
+ * screen — so every figure that was set against the desktop card is now
+ * oversized against the viewport it has to move through. 120px of runway on top
+ * of a card that already fills 47% of the screen is a card that has landed and
+ * then waits; 26px of peek under six of them stacks 130px of empty edge above
+ * the top card, which is 15% of the screen spent on the cards you have already
+ * read.
+ */
+@media (max-width: 46rem) {
+  .cardstack.stage-stack {
+    --stack-gap: 84px;
+    --stack-peek: 20px;
+    --stack-tail: 28vh;
+  }
+}
+
+.stage-card {
   height: 16.5rem;
   margin: 0;
   padding: 1rem;
   border-radius: var(--radius-lg);
   background: var(--surface);
   border: 1px solid var(--border);
-  box-shadow: 0 18px 40px -28px rgba(10, 10, 10, 0.5);
+  box-shadow: 0 18px 40px -28px hsl(28deg 30% 14% / 0.5);
 
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr) auto;
@@ -1181,7 +1224,7 @@
 }
 
 @media (max-width: 62rem) {
-  .scroll-stack-card.stage-card {
+  .stage-card {
     grid-template-columns: 11rem minmax(0, 1fr) auto;
     gap: 1.1rem;
   }
@@ -1191,7 +1234,7 @@
    heading, so the card grows — the deck loses its even edges here, which is
    the lesser evil against a 15rem image column on a phone. */
 @media (max-width: 46rem) {
-  .scroll-stack-card.stage-card {
+  .stage-card {
     height: auto;
     grid-template-columns: minmax(0, 1fr);
     gap: 0.9rem;
@@ -1206,13 +1249,4 @@
     margin-right: 0;
   }
 
-  .stage-stack .scroll-stack-end {
-    margin-top: 40vh;
-  }
-
-  /* Cards are auto-height here (image over text), so they run taller than the
-     16.5rem the desktop figure assumes and hang further below. */
-  .stage-stack {
-    padding-bottom: max(3rem, calc(34rem - 32vh));
-  }
 }

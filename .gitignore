@@ -1,3 +1,6 @@
 node_modules
 dist
 *.local
+
+# Editor-local settings (Live Server port), not project config
+.vscode

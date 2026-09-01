@@ -11,7 +11,7 @@
      middle rather than from its top-left corner. */
   --spotlight-x: 50%;
   --spotlight-y: 50%;
-  --spotlight-color: rgba(224, 50, 0, 0.1);
+  --spotlight-color: color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 .spotlight-card::before {

@@ -57,7 +57,7 @@
 
 /* Colour, not weight, is what separates the two words. */
 .logo__word-a {
-  color: var(--navy);
+  color: var(--dark);
 }
 
 .logo__word-b {
@@ -157,12 +157,15 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* Nothing here degrades gracefully on its own: without the filter the bar is
-   just a 90% white wash and the content behind it stays legible through it. */
+/* Without the filter the bar is just the same wash, un-blurred, and the content
+   behind it stays legible through it. It used to fall back to `--surface` —
+   fully opaque pure white — which was invisible over near-white footage and is a
+   hard white slab over the walkthrough. Keeping the translucency is both closer
+   to the intended look and the safer failure. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .site-header,
   .site-header__panel {
-    background: var(--surface);
+    background: var(--glass-strong);
   }
 }
 
@@ -348,7 +351,7 @@
 /* ------------------------------------------------------------- site footer */
 
 .site-footer {
-  background: var(--navy-deep);
+  background: var(--dark-deep);
   color: var(--faint);
 }
 

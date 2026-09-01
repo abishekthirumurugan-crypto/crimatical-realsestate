@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { Link, useRoute } from '../lib/router';
+import { useRoute } from '../lib/router';
+import { openEnquiry } from '../lib/enquiry';
 import { COMPANY } from '../content/site';
 
 /**
@@ -17,44 +18,33 @@ export default function FloatingActions() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    let frame = 0;
-    let film: HTMLElement | null = null;
+    const film = document.querySelector<HTMLElement>('[data-scroll-video]');
 
-    const evaluate = () => {
-      frame = 0;
+    // No film on this route: the rail is simply always available.
+    if (!film) {
+      setVisible(true);
+      return;
+    }
 
-      // Re-find the film only when the cached node has gone: Home removes it
-      // from the document once it has been scrolled past.
-      if (!film || !film.isConnected) {
-        film = document.querySelector<HTMLElement>('[data-scroll-video]');
-      }
+    /**
+     * An observer, not a scroll handler.
+     *
+     * This used to read `getBoundingClientRect().bottom` inside a
+     * rAF-coalesced scroll listener — correct, and one forced layout flush per
+     * scroll frame on the one page that is also driving a video scrub. On a
+     * phone that is enough to cost frames: the read has to resolve style and
+     * layout before the scrub loop gets to do its compositor work.
+     *
+     * "Has the film left the viewport" is exactly what an IntersectionObserver
+     * answers, off the main thread and only when the answer changes.
+     */
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(!entry.isIntersecting),
+      { threshold: 0 },
+    );
+    observer.observe(film);
 
-      if (!film) {
-        setVisible(true);
-        return;
-      }
-
-      // Show once the film has left the viewport entirely, not merely when the
-      // scrub has finished — its last frame is still on screen at that point.
-      setVisible(film.getBoundingClientRect().bottom <= 0);
-    };
-
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(evaluate);
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    // The incoming route has not painted yet on the first pass, so check again
-    // a frame later rather than reading a stale layout.
-    evaluate();
-    frame = requestAnimationFrame(evaluate);
-
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
+    return () => observer.disconnect();
   }, [route]);
 
   const waText = encodeURIComponent(COMPANY.whatsappMessage);
@@ -92,9 +82,14 @@ export default function FloatingActions() {
         <span className="actions__label">Call us</span>
       </a>
 
-      <Link
+      {/* A button, not a link to /contact: it opens the enquiry popup in
+          place. The contact page is still there and still linked from the
+          header and the footer — this is the shortcut, and a shortcut that
+          leaves the page you are reading is not one. */}
+      <button
+        type="button"
         className="actions__item actions__item--enquiry"
-        to="/contact"
+        onClick={openEnquiry}
         tabIndex={visible ? 0 : -1}
         aria-hidden={!visible}
       >
@@ -104,7 +99,7 @@ export default function FloatingActions() {
           </svg>
         </span>
         <span className="actions__label">Enquire</span>
-      </Link>
+      </button>
     </nav>
   );
 }

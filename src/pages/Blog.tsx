@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import PageHero from '../components/PageHero';
 import PostCard from '../components/PostCard';
+import CardStack from '../components/CardStack';
 import { useReveals } from '../hooks/useReveals';
 import { POSTS_BY_DATE } from '../content/site';
 
@@ -49,9 +50,11 @@ export default function Blog() {
 
         {posts.length > 0 ? (
           <div className="posts reveal" data-reveal>
-            {posts.map((post) => (
-              <PostCard key={post.slug} post={post} />
-            ))}
+            <CardStack>
+              {posts.map((post) => (
+                <PostCard key={post.slug} post={post} />
+              ))}
+            </CardStack>
           </div>
         ) : (
           <p className="empty">

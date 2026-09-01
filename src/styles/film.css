@@ -1,126 +1,165 @@
 /**
  * The film stage and its overlay.
  *
- * The current cut is a building on a mid-grey studio sweep, and that decides
- * the whole treatment.
+ * The footage is a photographic walkthrough: one forward dolly from the street,
+ * through the gate and the hall, to the terrace. It is edge-to-edge picture, it
+ * is dark, and it moves — which inverts every assumption the previous cut left
+ * behind.
  *
- * The previous cut was isolated on pure *white*, which let the film be
- * full-bleed: the stage was painted the same white — a soft gradient, latterly
- * — and `mix-blend-mode: multiply` dropped the footage's own background out of
- * the way, so the tower appeared to stand on the page itself with no frame
- * anywhere.
+ * That cut was an isolated CGI model on a studio sweep, tone-graded in the
+ * encode until its backdrop landed within ΔE 1.6 of `--bg`. That grade was the
+ * whole trick: with the frame and the page the same ground, a `contain` fit had
+ * no visible letterbox, so the film could be full-bleed with no edge anywhere,
+ * and dark type could sit in the empty gutters either side of the subject.
  *
- * None of that works here. The sweep measures around #bcbdc1 and the building's
- * own lit concrete measures the same, so no clamp or blend separates them:
- * anything that lifts the backdrop to white takes the building's highlights
- * with it. Hiding the frame would only produce a grey rectangle with a visible
- * edge, which is worse than not trying.
+ * None of it transfers. There is no backdrop to grade in a full-frame interior,
+ * and there are no empty gutters in a photograph. So:
  *
- * So the frame is not hidden. The video is sized to its own 16:9 exactly — no
- * letterbox, therefore no stage colour is ever visible inside it — and
- * presented as what it is: a rounded, shadowed panel centred on the page, with
- * ordinary page ground around it.
+ *  - The stage is `--dark-deep`, not the page. Where the film does not reach —
+ *    the bars on a portrait screen — the ground reads as cinema letterbox,
+ *    which is a deliberate frame rather than a colour mismatch.
+ *  - All the copy comes off the picture and onto a solid band at the foot. The
+ *    measurement behind that is in FilmOverlay.tsx; the short version is that
+ *    the ground under the old columns runs L* 5 to L* 93, no ink works across
+ *    that, and no translucent scrim fixes it without hiding the film.
+ *  - Every colour in here is a dark-surface token. `--ink`, `--muted`,
+ *    `--primary` and `--primary-ink` are all calibrated against a near-white
+ *    page and all of them fail on this ground; their dark-ground counterparts
+ *    (`--gold`, `--primary-on-dark`) are what this file uses.
  */
 
-.film {
-  /**
-   * Width reserved beside the video for the two overlay columns.
-   *
-   * Zero by default, and only opened up past 64rem: the columns take their
-   * width straight out of the video's, so on anything narrower the trade is a
-   * bad one and the film simply gets the whole stage.
-   */
-  --film-gutter: 0px;
-
-  /**
-   * The foot of the stage: the survey rule, and the clearance above it that the
-   * scroll hint sits in.
-   *
-   * Written down once here because the gutter columns and the video both need
-   * to know where the bottom of their band is, and the only alternative is
-   * measuring it in JavaScript on every resize.
-   *
-   * It used to also carry the phase block — a marker pill, the stage name at
-   * 4.5rem and its note, stacked under the film. That is gone. It sat exactly
-   * where the video wants to be, and what it said now leads the left-hand
-   * column instead.
-   */
-  --film-foot: 6.5rem;
+/* ------------------------------------------------------ the home scrollbar
+ *
+ * Hidden, on this page and only on this page.
+ *
+ * The film is a full-bleed picture that IS a scrollbar — it reports position by
+ * being the thing the scroll moves, and FilmOverlay puts a survey rule over it
+ * saying the same in words. A native bar down the right edge is a third copy of
+ * that number, and the only one drawn in system chrome on top of a photograph.
+ *
+ * `html`, not `body`. The root element's overflow is what propagates to the
+ * viewport, so the viewport's scrollbar is styled from there — the same reason
+ * base.css puts `overflow-x` on `html` and explains why at length.
+ *
+ * `:has(.film)` is the route test, reusing the signal `.scroll-rule` already
+ * hides itself with in motion.css rather than adding a body class for it. The
+ * film only exists on the home page, so its presence IS the condition, and
+ * leaving the page removes the element and with it this rule.
+ *
+ * Two properties because there is no one way to say it: `scrollbar-width` is
+ * the standard and covers Firefox and current Chrome, `::-webkit-scrollbar`
+ * covers Safari. Neither stops the page scrolling — the wheel, the keys, the
+ * touch drag and the scrollbar's own accessibility role are all untouched.
+ */
+html:has(.film) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
+html:has(.film)::-webkit-scrollbar {
+  display: none;
+}
+
+.film {
+  /* Nothing to declare here any more: the copy is positioned against the
+     stage directly, and the scrim it sits on is sized in the rule below. */
+}
 
 /**
  * The sticky stage — exactly one viewport.
  *
- * The page's own ground, and that is the whole trick: the encode's tone curve
- * puts the footage's backdrop at #f4f4f6 against a #f6f6f6 page — three levels
- * apart, a contrast ratio of 1.01. So the letterbox around a `contain` fit is
- * indistinguishable from the frame inside it, and the film has no visible edge
- * anywhere despite covering the whole screen.
+ * `--dark-deep` rather than the page colour. On a landscape screen the video
+ * covers this completely; on a portrait one it is the letterbox, and a near-
+ * black bar either side of a dark interior reads as a frame while a cream one
+ * would read as a mistake.
  */
 .film__stage {
-  background: var(--bg);
+  background: var(--dark-deep);
+}
+
+/* --------------------------------------------------------------- the copy */
+
+/**
+ * The gradient the copy is legible against.
+ *
+ * This is the whole legibility answer, and it is a measurement rather than a
+ * taste. Sampled at the scale text is read, the ground under a full-height
+ * column of copy on this film runs L* 5 to L* 93 — there is no ink that
+ * survives that, and washing a column dark enough to fix it takes 80% opacity,
+ * by which point the film is gone behind the words.
+ *
+ * Being small is what makes it possible. One block, low and left, over an
+ * ellipse anchored to that corner.
+ *
+ * The stops were tuned by compositing this exact gradient over every frame and
+ * measuring what the copy lands on, not by eye. Two figures matter: what the
+ * text holds, and how much film is paid for it. A first pass at 88/76/30 held
+ * white at 11.1:1 — far more than anything needs — while dimming 46% of the
+ * frame. Pulling the stops in to 84/66/16 gives up headroom nothing was using
+ * and buys back a third of the picture:
+ *
+ *   white heading    8.0:1 worst frame, 9.9:1 median
+ *   body copy        6.2:1 worst frame, 7.8:1 median   (AA is 4.5:1)
+ *   frame dimmed     30.4%, down from 46.2%
+ *
+ * The top and right of the frame — where the room actually is — stay untouched.
+ *
+ * Anchored to the corner rather than banded across the foot so it reads as
+ * light falling off, which is what a room does, instead of as a plate.
+ */
+.film__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    150% 115% at 0% 100%,
+    color-mix(in srgb, var(--dark-deep) 84%, transparent) 0%,
+    color-mix(in srgb, var(--dark-deep) 66%, transparent) 40%,
+    color-mix(in srgb, var(--dark-deep) 16%, transparent) 62%,
+    color-mix(in srgb, var(--dark-deep) 0%, transparent) 85%
+  );
 }
 
 /**
- * A soft page-colour wash down each side, under the two gutter columns.
- *
- * The graded footage is near-white nearly everywhere, so this is invisible over
- * almost all of it: 94% of #f6f6f6 laid over a backdrop of #f8f8f8 comes back
- * as #f6f6f6. It exists for the one thing that is not near-white — the
- * building's cast shadow, which reaches the right-hand edge of the frame from
- * about halfway through the film and would otherwise put body copy on a
- * blue-grey at 2.6:1.
- *
- * The stops are placed against the subject: it holds at full strength across
- * the text, is gone by 34%, and the building itself never spans further out
- * than 33–66%, so the wash reaches the shadow without ever touching the
- * building.
- *
- * Only where the columns exist. Below 64rem the gutters are zero and this would
- * be washing the film for nothing.
+ * The copy sits inside the dark part of that ellipse, and its width is what
+ * keeps it there: past about 46% of the stage the gradient has fallen away.
  */
-.film__wash {
-  display: none;
+.film__copy {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(
-      to right,
-      rgba(246, 246, 246, 0.94) 0%,
-      rgba(246, 246, 246, 0.94) 16%,
-      rgba(246, 246, 246, 0) 34%
-    ),
-    linear-gradient(
-      to left,
-      rgba(246, 246, 246, 0.94) 0%,
-      rgba(246, 246, 246, 0.94) 16%,
-      rgba(246, 246, 246, 0) 34%
-    );
+  left: 0;
+  bottom: clamp(3rem, 8vh, 5.5rem);
+  width: 100%;
+  max-width: var(--max);
+  padding-inline: var(--gutter);
 }
 
-@media (min-width: 64rem) {
-  .film__wash {
-    display: block;
+.film__copy .roll {
+  max-width: min(46%, 34rem);
+}
+
+.film__space {
+  margin: 0;
+  font-size: clamp(1.75rem, 1.1rem + 2.4vw, 3rem);
+  font-weight: var(--weight-medium);
+  line-height: 1.06;
+  color: #fff;
+}
+
+.film__body {
+  margin: 0.6rem 0 0;
+  font-size: var(--text-lg);
+  line-height: 1.5;
+  /* 0.88, not 0.82: on the lightened scrim the lower value measured 4.68:1 at
+     the film's worst frame, which clears AA by too little to be comfortable on
+     moving picture. `--muted` would be roughly 1.2:1 here, which is the whole
+     reason this file no longer uses it. */
+  color: rgba(255, 255, 255, 0.88);
+}
+
+@media (max-width: 60rem) {
+  .film__copy .roll {
+    max-width: min(76%, 30rem);
   }
-}
-
-@media (min-width: 64rem) {
-  .film {
-    --film-gutter: clamp(15rem, 21vw, 23rem);
-  }
-}
-
-
-.film__overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  color: var(--ink);
-  pointer-events: none;
 }
 
 /* ------------------------------------------------------------- the roll
@@ -140,36 +179,25 @@
 
 .roll {
   /**
-   * The window, not the step.
-   *
-   * These used to be the same number: one block per window height, and the
-   * stack shifted a whole window per stage. That only holds while every block
-   * fits, and at 1280–1500px the gutter is narrow enough that the longest one
-   * ran to 487px inside a 224px window — so it spilled into the stage behind it
-   * and two stages were legible at once.
-   *
-   * Now the step is measured from the blocks themselves (FilmOverlay) and this
-   * is purely how much of the roll you can see at a time — so it can simply ask
-   * for as much as it would like and let `max-height` take back whatever the
-   * band cannot spare. The old `26vh` term was doing that job badly: on a
-   * 625px-tall window it resolved to 162px, was clamped back up to 224px, and
-   * left 71px of the band unused.
+   * The window, not the step. The step is measured from the blocks themselves
+   * (FilmOverlay.tsx); this is purely how much of the roll you can see at once.
    */
-  --roll-h: 26rem;
-  /** Blank between one stage's block and the next, so they read as separate. */
-  --roll-gap: 2.5rem;
+  /**
+   * Tall enough for the worst block, which is a two-line heading over a
+   * two-line body: `The principal bedroom` wraps at every width where the
+   * heading is at its largest. At 9.5rem the second line of the body was being
+   * eaten by the bottom fade.
+   */
+  --roll-h: 12rem;
+  /** Blank between one space's block and the next, so they read as separate. */
+  --roll-gap: 2rem;
   /**
    * Where the mask's fades end, as a fraction of the window — and therefore
-   * where the legible band starts and stops.
-   *
-   * Declared as numbers rather than baked into the gradient because FilmOverlay
-   * needs the same two figures: it starts each stage `--roll-lead` down the
-   * window so the opening line arrives already legible, and it sizes the last
-   * stage's resting position against the band between them. One source of
-   * truth, read back through `getComputedStyle`.
+   * where the legible band starts and stops. FilmOverlay reads these back so
+   * the two never disagree.
    */
-  --roll-lead: 0.15;
-  --roll-tail: 0.82;
+  --roll-lead: 0.08;
+  --roll-tail: 0.92;
   height: var(--roll-h);
   max-height: 100%;
   min-height: 0;
@@ -200,9 +228,21 @@
   will-change: transform;
 }
 
-/* No height. Each block is as tall as its own copy, which is what makes the
-   measured step correct — see the note on `.roll` above. */
+/**
+ * No fixed height — each block is as tall as its own copy, which is what makes
+ * the measured step correct (see the note on `.roll` above).
+ *
+ * But a floor, because the window has to fit the TALLEST block and the others
+ * would otherwise leave room at the bottom for the next one to show through:
+ * with a two-line heading setting the window at 12rem, `The approach` at four
+ * lines total left 45px of `The entrance` visible underneath it. The floor is
+ * the mask's clear zone plus the gap, so a short block fills the legible band
+ * exactly and the one behind it stays outside the window until it is due.
+ */
 .roll__item {
+  min-height: calc(
+    var(--roll-h) * (var(--roll-tail) - var(--roll-lead)) + var(--roll-gap)
+  );
   padding-bottom: var(--roll-gap);
 }
 
@@ -214,152 +254,20 @@
   }
 }
 
-/* --------------------------------------------------------- the survey rule
- *
- * A levelling staff laid on its side. Minor graduations every 2% of the film,
- * majors at each construction stage, and a travelling head reading the current
- * position — the same instrument that set the floor levels, used here to
- * measure how far through the build you have scrolled.
- *
- * The head is moved by a direct transform write from ScrollVideo's onProgress
- * ref callback, never by React state, so scrubbing costs no renders.
- */
-
-.staff {
-  position: relative;
-  height: 4rem;
-  /**
-   * No border, no background, no backdrop blur.
-   *
-   * All three were inherited from when the film was dark footage and the rule
-   * needed to lift off it. On a white page they do nothing useful and one of
-   * them does harm: `backdrop-filter` samples *past* the element's edge, so the
-   * compositor lays down a hairline right along its top — a full-width line at
-   * the foot of the frame, which is exactly the line that keeps showing up.
-   *
-   * Nothing is lost by dropping them: the frame is white here, and the
-   * building's own silhouette never reaches this far down the stage (checked
-   * across viewport heights — the closest it gets is ~115px clear).
-   */
-}
-
-/* The graduation track. Also the coordinate space the travelling head is
-   measured in, so the head and the stage marks cannot drift apart. */
-.staff__ticks {
-  position: absolute;
-  inset: 0 var(--gutter) auto;
-  height: 1.15rem;
-  max-width: calc(var(--max) - var(--gutter) * 2);
-  margin-inline: auto;
-}
-
-.staff__tick {
-  position: absolute;
-  top: 0;
-  width: 1px;
-  height: 0.34rem;
-  transform: translateX(-50%);
-  background: var(--border-strong);
-}
-
-.staff__tick--major {
-  height: 0.85rem;
-  background: var(--muted);
-}
-
-/* Stage labels sit under their own major graduation, so the rule reads as a
-   dated programme rather than a progress bar with decoration. */
-.staff__labels {
-  position: absolute;
-  inset: 1.35rem var(--gutter) auto;
-  height: 1rem;
-  max-width: calc(var(--max) - var(--gutter) * 2);
-  margin-inline: auto;
-}
-
-.staff__label {
-  position: absolute;
-  top: 0;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: var(--text-sm);
-  color: var(--muted);
-  transition: color 240ms ease;
-}
-
-/* First and last labels tuck inside the rule instead of hanging off its ends. */
-.staff__label:first-child {
-  transform: none;
-}
-
-.staff__label:last-child {
-  transform: translateX(-100%);
-}
-
-.staff__label[data-current='true'] {
-  color: var(--primary-ink);
-  font-weight: var(--weight-medium);
-}
-
-/* The travelling head. */
-.staff__head {
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: 2px;
-  height: 1.15rem;
-  border-radius: 2px;
-  background: var(--primary);
-  /* Positioned by transform only — never `left` — so moving it is a compositor
-     job and cannot invalidate layout on any other element. */
-  transform: translateX(0);
-  will-change: transform;
-}
-
-.staff__head::after {
-  content: '';
-  position: absolute;
-  top: 1.3rem;
-  left: 50%;
-  width: 0;
-  height: 0;
-  transform: translateX(-50%);
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid var(--primary);
-}
-
-.staff__readout {
-  position: absolute;
-  inset: auto var(--gutter) 0.55rem auto;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
-  color: var(--muted);
-}
-
-@media (max-width: 46rem) {
-  .staff {
-    height: 3.4rem;
-  }
-  /* Six dates will not fit across a phone. The head, the graduations and the
-     readout still carry the position; the labels are the part that can go. */
-  .staff__labels {
-    display: none;
-  }
-}
-
 /* ------------------------------------------------------------ scroll hint */
 
-/* Sits in the clearance `--film-foot` reserves between the foot of the video
-   and the survey rule, so it never lands on the film. */
+/* Bottom-centre, on the strong part of the scrim. It was `--muted` on the old
+   white frame — about 1.0:1 against this footage, on the one element whose
+   failure costs the interaction rather than a line of copy. */
 .hint {
   position: absolute;
-  inset: auto 0 4.6rem;
+  inset: auto 0 1.4rem;
   display: flex;
   justify-content: center;
   font-size: var(--text-sm);
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.66);
   transition: opacity 500ms ease;
+  pointer-events: none;
 }
 
 .hint[data-gone='true'] {
@@ -368,6 +276,12 @@
 
 /* ------------------------------------------------------------- the loader */
 
+/**
+ * The loader resolves INTO the film, so it has to be the film's ground rather
+ * than the page's. ScrollVideo unmounts it the instant `ready` flips while the
+ * video fades up over 300ms; on a cream ground that hand-off was a flash to
+ * near-black.
+ */
 .loader {
   position: absolute;
   inset: 0;
@@ -376,9 +290,8 @@
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  /* The stage's own ground, so nothing changes colour when the film arrives. */
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--dark-deep);
+  color: #fff;
 }
 
 /* The mark is the first thing that paints, before a single frame of film has
@@ -400,7 +313,7 @@
 
 .loader__label {
   font-size: var(--text-sm);
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .loader__rule {
@@ -409,21 +322,21 @@
   height: 3px;
   border-radius: 3px;
   overflow: hidden;
-  background: var(--border);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .loader__fill {
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 3px;
-  background: var(--primary);
+  background: var(--primary-on-dark);
   transition: width 180ms linear;
 }
 
 .loader__pct {
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* Indeterminate: no Content-Length, so sweep instead of filling. */
@@ -445,191 +358,4 @@
   .loader__logo {
     animation: none;
   }
-}
-
-/* ---------------------------------------------------------- the gutters ---
- *
- * Two columns in the space beside the frame: where you are in the sequence, and
- * the shape of the programme. Both are `aria-hidden` — they repeat what the
- * build log already says properly further down the page, and a screen reader
- * should not hear the six stages twice.
- *
- * No text shadow anywhere: the letterbox is the same white as the footage, so
- * there is nothing for the type to fight.
- */
-
-/**
- * The band a gutter column lives in.
- *
- * It used to be centred on 46% of the stage and sized only by its own content,
- * which meant that on a shallow window it simply grew down into whatever was
- * below it — measured at 1264×625 it overlapped the old phase block by 33px.
- * Pinning it between the header and the foot of the stage makes the available
- * room explicit, and `max-height: 100%` on `.roll` then lets the window shrink
- * into it instead of pushing past it. Nothing can collide, at any height.
- *
- * The band is the same one the video is centred in, so the two share a middle
- * line and the three columns read as one composition.
- *
- * `justify-content: center` keeps the old optical placement: on a tall screen
- * there is slack above and below and the column still sits mid-frame.
- */
-.film__aside {
-  display: none;
-  flex-direction: column;
-  justify-content: center;
-  position: absolute;
-  top: var(--header-h);
-  bottom: var(--film-foot);
-  width: var(--film-gutter);
-}
-
-@media (min-width: 64rem) {
-  .film__aside {
-    display: flex;
-  }
-}
-
-/* The inner padding is the gap between the column and the video panel, so it
-   is fluid: 1rem left the two almost touching at 1440, and a fixed larger
-   value would have eaten most of a 15rem gutter at 1024. */
-.film__aside--left {
-  left: 0;
-  padding-left: var(--gutter);
-  padding-right: clamp(1rem, 2.4vw, 2.75rem);
-}
-
-.film__aside--right {
-  right: 0;
-  padding-right: var(--gutter);
-  padding-left: clamp(1rem, 2.4vw, 2.75rem);
-  text-align: right;
-}
-
-.film__aside-eyebrow {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--primary-ink);
-}
-
-/**
- * The stage name, moved here from the block that used to sit under the film.
- *
- * Nothing like the 4.5rem it was set at down there — a gutter is ~300px wide
- * and `Foundation` alone would have run off the end of it. This is the largest
- * step that still holds the longest name on one line at 64rem.
- */
-.film__aside-name {
-  margin-top: 0.4rem;
-  font-size: clamp(1.5rem, 0.95rem + 1.4vw, 2.25rem);
-  font-weight: var(--weight-medium);
-  line-height: 1.1;
-  color: var(--ink);
-}
-
-.film__aside-body {
-  margin-top: 0.65rem;
-  font-size: var(--text-lg);
-  line-height: 1.6;
-  color: var(--muted);
-  /* No text shadow: the letterbox is the same white as the footage, so there is
-     nothing for the type to fight. */
-}
-
-/* --- the shape of the programme --- */
-
-/* Separated by space, not a rule — the last stray line in the frame. */
-.film__facts {
-  /* A flex item beside the roll now. It is four short lines and it either fits
-     or it is hidden outright below 860px; it must never be the thing that
-     shrinks. */
-  flex: none;
-  margin: 2.1rem 0 0;
-  display: grid;
-  gap: 0.6rem;
-}
-
-/**
- * The programme figures repeat the survey rule's own dates, so they are what
- * gives way once the column has no room to spare.
- *
- * This has to come *after* the rule above, not up with the roll where it used
- * to live. A media query adds no specificity, so `display: grid` further down
- * the file simply wonout and the figures were never actually hidden — which
- * is why the right-hand column was being squeezed to 134px on a 625px-tall
- * window while the left had 263px.
- */
-@media (max-height: 860px) {
-  .film__facts {
-    display: none;
-  }
-}
-
-.film__facts > div {
-  display: grid;
-  gap: 0.1rem;
-}
-
-.film__facts dt {
-  font-size: var(--text-xs);
-  color: var(--faint);
-}
-
-.film__facts dd {
-  margin: 0;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- the facts behind each stage --- */
-
-.film__points {
-  list-style: none;
-  margin: 0.9rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.4rem;
-}
-
-.film__points li {
-  display: flex;
-  align-items: baseline;
-  gap: 0.55rem;
-  font-size: var(--text);
-  color: var(--ink);
-}
-
-.film__points li::before {
-  content: '';
-  width: 5px;
-  height: 5px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--primary);
-  transform: translateY(-0.15em);
-}
-
-/* --- the figure the stage is measured by --- */
-
-.film__stat {
-  margin: 1rem 0 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.1rem;
-}
-
-.film__stat-value {
-  font-size: var(--h3);
-  font-weight: var(--weight-medium);
-  line-height: 1;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.film__stat-label {
-  font-size: var(--text-sm);
-  color: var(--muted);
 }

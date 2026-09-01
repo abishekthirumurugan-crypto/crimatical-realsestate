@@ -37,7 +37,7 @@
  * a translucent card read as an object; it keeps the border it had.
  */
 
-.stat,
+.stat__face,
 .spec-card,
 .tl__card,
 .unit,
@@ -56,9 +56,27 @@
   background: var(--glass);
 }
 
+/*
+ * Except in a stack, where what is behind a card is not the page.
+ *
+ * The fill above is 62% opaque, and that is the whole point of it: over a flat
+ * near-white page the 38% showing through IS the page. Stack five of them and
+ * the 38% showing through is four more cards — the deck reads as one card with
+ * everybody else's text printed on it. So a card in a `CardStack` deck takes
+ * the opaque fill its own component declares, which is what the build log has
+ * used since it was the only stack on the site.
+ *
+ * Two classes is deliberate. It outranks the single-class rule above whichever
+ * way round the two stylesheets land, and CardStack.css arrives with its
+ * component rather than from the ordered list in App.tsx.
+ */
+.cardstack .cardstack__card > * {
+  background: var(--surface);
+}
+
 /* ------------------------------------------------------- resting elevation */
 
-.stat,
+.stat__face,
 .spec-card,
 .tl__card,
 .unit,
@@ -158,6 +176,46 @@
   opacity: 1;
 }
 
+/*
+ * And the fill warms, under a real cursor and nowhere else.
+ *
+ * The lift above says a card has come forward; this says the same thing in the
+ * one channel the shadow cannot reach — the card's own face. `--surface-hover`
+ * is a warm ivory chosen against the body text rather than against the page;
+ * the measurements that picked it are on the token in tokens.css.
+ *
+ * `(hover: hover) and (pointer: fine)` is the gate, and it is doing real work
+ * rather than being belt-and-braces. A touch screen has no hover: it fakes one
+ * on tap and then LEAVES IT THERE until you touch something else, so an
+ * ungated rule does not read as feedback on a phone — it reads as one card
+ * being mysteriously a different colour from its neighbours for as long as you
+ * stay on the page. `pointer: fine` is the second half because a hybrid laptop
+ * with a touchscreen answers `hover: hover` and would take the fill from a
+ * finger; asking for a fine pointer as well means a mouse, which is the only
+ * input that can actually hover something without committing to it.
+ *
+ * Nothing else changes: no fill on the cards that do not already lift, and none
+ * of this exists below the hover query at all.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .spec-card:hover,
+  .unit:hover,
+  .service:hover,
+  .post-card:hover,
+  /* Neither of these lifts, but both raise under `useCardFocus`, so both have
+     to warm — otherwise the fill would appear only past 62rem where the raise
+     arms, and a narrower desktop window would have two kinds of card. */
+  .value:hover,
+  .person:hover,
+  .entry__nav-link:hover,
+  /* The two that are links take it from the keyboard as well, for the same
+     reason the lift does. */
+  .post-card:focus-visible,
+  .entry__nav-link:focus-visible {
+    background: var(--surface-hover);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spec-card,
   .unit,
@@ -221,7 +279,10 @@
   border: 1px solid var(--glass-edge);
   box-shadow:
     var(--shadow-md),
-    0 8px 32px rgba(80, 90, 140, 0.08);
+    /* The wide halo, on the same warm hue as the elevation ladder. It was a
+       blue-grey, left over from when the page was cool; over this ground a
+       cool shadow is the one place the eye finds blue. */
+    0 8px 32px hsl(28deg 30% 14% / 0.1);
 }
 
 .filter {

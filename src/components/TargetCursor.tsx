@@ -6,6 +6,13 @@
  * The logic is the registry's, unchanged. It is written as TSX rather than JSX
  * because `npm run build` runs `tsc --noEmit` with `allowJs` off, so a plain
  * .jsx module would not resolve from the pages that import it.
+ *
+ * One addition: the colour props accept `var(--token)` and are resolved before
+ * they reach GSAP. The corners and the dot are *tweened* between colours, and
+ * GSAP's colour plugin parses the value itself — it has no CSS engine, so a
+ * `var()` reaches it as an unparseable string and the tween silently does
+ * nothing. Resolving at the call site instead of hard-coding a hex is what lets
+ * the cursor sit on the palette without pinning a copy of it here.
  */
 
 import { useEffect, useRef, useCallback, useMemo } from 'react';
@@ -24,8 +31,25 @@ interface TargetCursorProps {
   hoverDuration?: number;
   /** Lets the locked corners drift with the pointer. */
   parallaxOn?: boolean;
+  /** Resting colour of the corners and the dot. Accepts `var(--token)`. */
   cursorColor?: string;
+  /** Colour they tween to over a target. Accepts `var(--token)`. */
   cursorColorOnTarget?: string;
+}
+
+/**
+ * Resolve `var(--token)` (with an optional fallback) against the document root.
+ *
+ * Read at the moment it is needed rather than cached, so the value is right
+ * even if the palette is swapped at runtime, and so nothing touches the DOM
+ * during the first render.
+ */
+function resolveColor(value: string | undefined): string | undefined {
+  if (!value || !value.startsWith('var(') || typeof document === 'undefined') return value;
+  const match = /^var\(\s*(--[\w-]+)\s*(?:,([\s\S]+))?\)$/.exec(value.trim());
+  if (!match) return value;
+  const resolved = getComputedStyle(document.documentElement).getPropertyValue(match[1]).trim();
+  return resolved || match[2]?.trim() || undefined;
 }
 
 interface Point {
@@ -72,7 +96,7 @@ export default function TargetCursor({
   hideDefaultCursor = true,
   hoverDuration = 0.2,
   parallaxOn = true,
-  cursorColor = '#ffffff',
+  cursorColor = 'var(--ink)',
   cursorColorOnTarget,
 }: TargetCursorProps) {
   const cursorRef = useRef<HTMLDivElement>(null);
@@ -260,15 +284,16 @@ export default function TargetCursor({
       spinTl.current?.pause();
       gsap.set(cursorRef.current, { rotation: 0 });
 
-      if (cursorColorOnTarget) {
+      const onTarget = resolveColor(cursorColorOnTarget);
+      if (onTarget) {
         gsap.to(corners, {
-          borderColor: cursorColorOnTarget,
+          borderColor: onTarget,
           duration: 0.15,
           ease: 'power2.out',
         });
         if (dotRef.current) {
           gsap.to(dotRef.current, {
-            backgroundColor: cursorColorOnTarget,
+            backgroundColor: onTarget,
             duration: 0.15,
             ease: 'power2.out',
           });
@@ -325,15 +350,16 @@ export default function TargetCursor({
         gsap.set(activeStrengthRef, { current: 0, overwrite: true });
         activeTarget = null;
 
-        if (cursorColorOnTarget && cornersRef.current) {
+        const resting = resolveColor(cursorColor);
+        if (cursorColorOnTarget && cornersRef.current && resting) {
           gsap.to(Array.from(cornersRef.current), {
-            borderColor: cursorColor,
+            borderColor: resting,
             duration: 0.15,
             ease: 'power2.out',
           });
           if (dotRef.current) {
             gsap.to(dotRef.current, {
-              backgroundColor: cursorColor,
+              backgroundColor: resting,
               duration: 0.15,
               ease: 'power2.out',
             });

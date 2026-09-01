@@ -94,7 +94,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.4rem 1.35rem 1.35rem;
+  padding: 1.4rem 1.35rem 1.35rem;  transition: background-color 220ms ease;
 }
 
 /* Rounded square, matching the services on Home rather than the circles on the
@@ -212,7 +212,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.35rem 1.3rem 1.3rem;
+  padding: 1.35rem 1.3rem 1.3rem;  transition: background-color 220ms ease;
 }
 
 .person__head {
@@ -232,7 +232,7 @@
   width: 2.8rem;
   height: 2.8rem;
   border-radius: 50%;
-  background: var(--navy);
+  background: var(--dark);
   color: #fff;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -331,7 +331,8 @@
   color: inherit;
   transition:
     transform 220ms ease,
-    border-color 220ms ease;
+    border-color 220ms ease,
+    background-color 220ms ease;
 }
 
 .post-card:hover {
@@ -511,13 +512,58 @@
 
 /* --------------------------------------------------------------- the entry */
 
+/*
+ * The entry runs in its own column, narrower than the rest of the site.
+ *
+ * Every other page is a grid of cards and wants the full 1336px shell. This one
+ * is a single column of prose, and prose has a width that is not negotiable
+ * with the layout: measured on this page, `.entry__body p` sets 70 characters
+ * to the line, which is squarely where long-form wants to be. Stretching it to
+ * the shell would put about 150 characters on a line — the reader loses their
+ * place returning to the left edge, which is the whole reason a measure exists.
+ *
+ * So the text could not widen, and the shell was 1336px, and the difference had
+ * to go somewhere. It went to the right-hand side: a 608px column of type sat
+ * against the left edge of a 1336px box with 688px of nothing beside it, under
+ * a 1256px photograph. The page read as broken rather than as spacious, and it
+ * was the image being wide that made the type look stranded rather than the
+ * type being narrow.
+ *
+ * Narrowing the container instead fixes both ends at once. The column becomes
+ * exactly the measure, everything in it — heading, standfirst, byline, image,
+ * body, the pager at the foot — is flush to the same two edges, and the whole
+ * thing centres on the page. Nothing is stranded because there is no longer a
+ * box wider than its contents.
+ *
+ * `--gutter` is added back on top so the content box lands ON the measure
+ * rather than the measure minus padding, which is what `.shell` would otherwise
+ * give.
+ */
+.entry__head,
+.entry__media,
+.entry__body,
+.entry__nav {
+  max-width: calc(var(--measure) + 2 * var(--gutter));
+}
+
 .entry__head {
   padding-top: calc(var(--header-h) + clamp(2rem, 5vw, 3.5rem));
   padding-bottom: clamp(1.75rem, 3.5vw, 2.5rem);
 }
 
+/*
+ * `block`, not `inline-block`, and `width: fit-content` to keep the hit area on
+ * the words rather than across the column.
+ *
+ * It was `inline-block`, and so is `.eyebrow` directly after it, so the two sat
+ * on one line with nothing between them — JSX drops the whitespace between
+ * sibling elements, so the page read "← JournalHow we work". The `margin-bottom`
+ * below was never doing anything either: a bottom margin cannot separate two
+ * boxes that are side by side on the same line.
+ */
 .entry__back {
-  display: inline-block;
+  display: block;
+  width: fit-content;
   margin-bottom: 1.5rem;
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -588,6 +634,59 @@
   margin-top: 0.85rem;
 }
 
+/*
+ * On a large screen the column widens — and the type grows with it, which is
+ * the only reason the column is allowed to.
+ *
+ * A measure is a character count, not a width. Widening the column alone spends
+ * the extra pixels on more characters per line: measured on this page, 38rem at
+ * 16px sets 76 to the line, and taking the column to 48rem while leaving the
+ * type alone takes that to 89 — past the point where the eye reliably finds the
+ * next line's start. Stepping the type up one size at the same time puts the
+ * count back to 83, because the line got longer and the characters got wider
+ * together.
+ *
+ *   38rem / 16px    608px    76 cpl   <- under 90rem
+ *   44rem / 16px    704px    86 cpl   too wide
+ *   48rem / 16px    768px    89 cpl   too wide
+ *   48rem / 18px    768px    83 cpl   <- this
+ *   52rem / 18px    832px    92 cpl   too wide
+ *
+ * 90rem is where it starts, because below that the column is not stranded: at
+ * 1280px the margins are already only 296px a side. This is for the 1728 and
+ * 1920 screens where 608px of text in the middle reads as lost.
+ *
+ * Not fluid between the two. A body size that changes continuously with the
+ * viewport is a body size that is wrong at almost every width — one step, at
+ * the width where the old setting stops working, is easier to reason about and
+ * easier to see is correct.
+ */
+@media (min-width: 90rem) {
+  .entry__head,
+  .entry__media,
+  .entry__body,
+  .entry__nav {
+    max-width: calc(48rem + 2 * var(--gutter));
+  }
+
+  /*
+   * The column governs from here, so the caps that were doing the job come off.
+   * Left on, `.entry__body p` would hold the text at 38rem inside a 48rem
+   * column and only the image would have grown — which is the same stranded
+   * text this whole section exists to fix, one level further in.
+   */
+  .entry__body p,
+  .entry__body li {
+    max-width: none;
+    font-size: var(--text-lg);
+  }
+
+  .entry__excerpt {
+    max-width: none;
+  }
+}
+
+
 .entry__nav {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
@@ -607,7 +706,8 @@
   color: inherit;
   transition:
     transform 220ms ease,
-    border-color 220ms ease;
+    border-color 220ms ease,
+    background-color 220ms ease;
 }
 
 .entry__nav-link:hover {

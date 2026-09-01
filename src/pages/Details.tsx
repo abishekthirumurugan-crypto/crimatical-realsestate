@@ -7,9 +7,10 @@ import PlanDiagram from '../components/PlanDiagram';
 import PostCard from '../components/PostCard';
 import TargetCursor from '../components/TargetCursor';
 import AccordionGallery from '../components/AccordionGallery';
-import ScrollStack, { ScrollStackItem } from '../components/ScrollStack';
+import CardStack from '../components/CardStack';
 import SpotlightCard from '../components/SpotlightCard';
 import { Link } from '../lib/router';
+import { openEnquiry } from '../lib/enquiry';
 import { useReveals } from '../hooks/useReveals';
 import { GALLERY, PHASES, PROJECT, RESIDENCES, SPEC_GROUPS } from '../content/project';
 import { BENEFITS, PARTNERS, POSTS_BY_DATE, SERVICES, STATS, TESTIMONIALS } from '../content/site';
@@ -58,7 +59,7 @@ export default function Details() {
     <>
       <PageHero
         eyebrow="The project"
-        title={`${PROJECT.name} — ${PROJECT.plot}, ${PROJECT.district}`}
+        title={`${PROJECT.name} ${PROJECT.plot}, ${PROJECT.district}`}
         lede="The specification, the programme, the plan types and what we do. The film on the home page is the same thirty months, scrubbed."
       />
 
@@ -69,8 +70,8 @@ export default function Details() {
           hideDefaultCursor={false}
           parallaxOn
           hoverDuration={0.95}
-          cursorColor="#000000"
-          cursorColorOnTarget="#f96804"
+          cursorColor="var(--ink)"
+          cursorColorOnTarget="var(--primary)"
         />
       </div>
       <section className="section section--tight shell">
@@ -82,9 +83,22 @@ export default function Details() {
         >
           {STATS.map((stat) => (
             <div key={stat.label} className="stat cursor-target">
-              <div className="stat__value">{stat.value}</div>
-              <div className="stat__label">{stat.label}</div>
-              <div className="stat__note">{stat.note}</div>
+              {/* Two faces, so the hover turn can stop at 180deg. A single
+                  element can only come back the right way up by going all the
+                  way round, and 360deg passes edge-on twice which reads as
+                  two flips, not one. The back is `aria-hidden` because it
+                  repeats the front verbatim and a screen reader should hear
+                  each figure once. */}
+              <div className="stat__face stat__face--front">
+                <div className="stat__value">{stat.value}</div>
+                <div className="stat__label">{stat.label}</div>
+                <div className="stat__note">{stat.note}</div>
+              </div>
+              <div className="stat__face stat__face--back" aria-hidden="true">
+                <div className="stat__value">{stat.value}</div>
+                <div className="stat__label">{stat.label}</div>
+                <div className="stat__note">{stat.note}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -98,7 +112,7 @@ export default function Details() {
             <h2>Thirty months from graded earth to a lit hallway</h2>
             <p>
               Block A is reinforced concrete on Plot 7, Perungudi, cast by our own crews. The
-              programme below is the whole of it — six stages, thirty months, published as each one
+              programme below is the whole of it six stages, thirty months, published as each one
               closed rather than assembled at the end.
             </p>
             <p>
@@ -139,13 +153,13 @@ export default function Details() {
                  in the content file because it still feeds each panel's
                  aria-label for anyone not looking at the screen. */
               showLabels={false}
-              /* --primary-on-dark. With the captions off this is only the
-                 keyboard focus ring, which still lands on a photograph, and
-                 --primary itself measures 3.7:1 against a dark one. */
-              accentColor="#ff6a3d"
+              /* With the captions off this is the active indicator and the
+                 keyboard focus ring, both of which land on a photograph;
+                 --primary itself measures only 3.7:1 against a dark one. */
+              accentColor="var(--primary-on-dark)"
               /* Inert while dim is 0; kept so that turning the dim back on
                  tints with --ink rather than the component's purple-black. */
-              overlayColor="#0a0a0a"
+              overlayColor="var(--ink)"
             />
           </div>
         </div>
@@ -165,37 +179,39 @@ export default function Details() {
         {/* Reveal sits on the grid, not on each card: one observer target
             fires the whole set, and `--spec-i` walks the cascade across it in
             source order regardless of how the four cards happen to wrap. */}
-        <div className="spec" data-reveal>
-          {SPEC_GROUPS.map((group, index) => (
-            <SpotlightCard
-              as="article"
-              key={group.title}
-              className="spec-card"
-              style={{ '--spec-i': index } as CSSProperties}
-            >
-              <header className="spec-card__head">
-                <span className="spec-card__icon">
-                  <Icon name={group.icon} />
-                </span>
-                <div>
-                  <h3 className="spec-card__title">{group.title}</h3>
-                  <p className="spec-card__summary">{group.summary}</p>
-                </div>
-              </header>
-
-              <dl className="spec-card__rows">
-                {group.rows.map((row) => (
-                  <div key={row.label} className="spec-row">
-                    <dt className="spec-row__label">{row.label}</dt>
-                    <dd className="spec-row__value">
-                      {row.value}
-                      {row.unit && <small>{row.unit}</small>}
-                    </dd>
+        <div className="spec reveal" data-reveal>
+          <CardStack>
+            {SPEC_GROUPS.map((group, index) => (
+              <SpotlightCard
+                as="article"
+                key={group.title}
+                className="spec-card"
+                style={{ '--spec-i': index } as CSSProperties}
+              >
+                <header className="spec-card__head">
+                  <span className="spec-card__icon">
+                    <Icon name={group.icon} />
+                  </span>
+                  <div>
+                    <h3 className="spec-card__title">{group.title}</h3>
+                    <p className="spec-card__summary">{group.summary}</p>
                   </div>
-                ))}
-              </dl>
-            </SpotlightCard>
-          ))}
+                </header>
+
+                <dl className="spec-card__rows">
+                  {group.rows.map((row) => (
+                    <div key={row.label} className="spec-row">
+                      <dt className="spec-row__label">{row.label}</dt>
+                      <dd className="spec-row__value">
+                        {row.value}
+                        {row.unit && <small>{row.unit}</small>}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </SpotlightCard>
+            ))}
+          </CardStack>
         </div>
       </section>
 
@@ -212,65 +228,64 @@ export default function Details() {
           </p>
         </div>
         {/*
-          The stack is driven by the page scroll rather than a nested scroll
-          box, so reading the section is ordinary scrolling — each stage pins
-          near the top of the viewport and the next rides up over it.
+          The one section that stacks at BOTH widths, which is why it passes
+          `stackAt` at all.
 
-          Note this puts Lenis in charge of window scrolling for the whole
-          Details page while it is mounted. That is what smooths the pinning;
-          it also means the page scrolls with inertia rather than natively.
+          Every other `CardStack` here is a rescue: a `repeat(auto-fit,
+          minmax(N, 1fr))` grid collapses to one column on a phone and becomes a
+          long single-file scroll, so the deck gives those cards something to do.
+          This one is not a rescue. Each card is an image and a paragraph, the
+          deck of six IS the section, and it is worth pinning whether it is
+          being read on a desk or in a hand.
+
+          The pin and ramp figures are `CardStack`'s defaults, tuned here first
+          and left there. The two that are not: the deck is six cards deep
+          rather than three or four, so it is given more room between them and a
+          slightly wider peek to count them by — and on a phone both of those
+          come down again, in sections.css, because a card that is nearly half
+          the screen tall does not need 120px of runway to announce itself.
         */}
-        <ScrollStack
-          className="stage-stack"
-          useWindowScroll
-          /* Under the fixed header (z-index 30), not level with it. */
-          stackPosition="18%"
-          scaleEndPosition="8%"
-          itemDistance={120}
-          itemStackDistance={26}
-          /* Six cards at the upstream 0.85 shrinks the first one to a stub by
-             the time the last lands. Starting higher keeps the deck readable. */
-          baseScale={0.92}
-          itemScale={0.014}
-        >
-          {PHASES.map((phase, index) => (
-            <ScrollStackItem key={phase.name} itemClassName="stage-card">
-              <div className="stage-card__media">
-                <img
-                  src={`/stills/${phase.image}-600.jpg`}
-                  srcSet={`/stills/${phase.image}-600.jpg 600w, /stills/${phase.image}-1200.jpg 1200w`}
-                  sizes="(max-width: 52rem) 100vw, 16rem"
-                  alt={phase.imageAlt}
-                  loading="lazy"
-                  decoding="async"
-                  width={1200}
-                  height={675}
-                />
-              </div>
-
-              <div className="stage-card__body">
-                <div className="stage-card__head">
-                  <span className="stage-card__stage">
-                    Stage {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <time className="stage-card__date">{phase.date}</time>
-                  {phase.gap && <span className="stage-card__gap">+{phase.gap}</span>}
+        <div className="stage-list">
+          <CardStack className="stage-stack" stackAt="both">
+            {PHASES.map((phase, index) => (
+              <article key={phase.name} className="stage-card">
+                <div className="stage-card__media">
+                  <img
+                    src={`/stills/${phase.image}-600.jpg`}
+                    srcSet={`/stills/${phase.image}-600.jpg 600w, /stills/${phase.image}-1200.jpg 1200w`}
+                    sizes="(max-width: 52rem) 100vw, 16rem"
+                    alt={phase.imageAlt}
+                    loading="lazy"
+                    decoding="async"
+                    width={1200}
+                    height={675}
+                  />
                 </div>
-                <h3 className="stage-card__name">{phase.name}</h3>
-                <p className="stage-card__note">{phase.note}</p>
-                <p className="stage-card__metric">{phase.metric}</p>
-              </div>
 
-              <span
-                className={`stage-card__badge${
-                  phase.status === 'scheduled' ? ' stage-card__badge--scheduled' : ''
-                }`}
-              >
-                {phase.status === 'complete' ? 'Complete' : 'Scheduled'}
-              </span>
-            </ScrollStackItem>
-          ))}
-        </ScrollStack>
+                <div className="stage-card__body">
+                  <div className="stage-card__head">
+                    <span className="stage-card__stage">
+                      Stage {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <time className="stage-card__date">{phase.date}</time>
+                    {phase.gap && <span className="stage-card__gap">+{phase.gap}</span>}
+                  </div>
+                  <h3 className="stage-card__name">{phase.name}</h3>
+                  <p className="stage-card__note">{phase.note}</p>
+                  <p className="stage-card__metric">{phase.metric}</p>
+                </div>
+
+                <span
+                  className={`stage-card__badge${
+                    phase.status === 'scheduled' ? ' stage-card__badge--scheduled' : ''
+                  }`}
+                >
+                  {phase.status === 'complete' ? 'Complete' : 'Scheduled'}
+                </span>
+              </article>
+            ))}
+          </CardStack>
+        </div>
       </section>
 
       {/* --- residences -------------------------------------------------- */}
@@ -286,60 +301,65 @@ export default function Details() {
             </Link>
           </div>
           <div className="units reveal" data-reveal>
-            {RESIDENCES.map((unit) => (
-              <article key={unit.type} className="unit">
-                <div className="unit__plan">
-                  <PlanDiagram name={unit.plan} />
-                  <span className="unit__left" data-scarce={unit.available <= 2}>
-                    {unit.available} left
-                  </span>
-                </div>
+            <CardStack>
+              {RESIDENCES.map((unit) => (
+                <article key={unit.type} className="unit">
+                  <div className="unit__plan">
+                    <PlanDiagram name={unit.plan} />
+                    <span className="unit__left" data-scarce={unit.available <= 2}>
+                      {unit.available} left
+                    </span>
+                  </div>
 
-                <div className="unit__head">
-                  <span className="unit__type">{unit.type}</span>
-                  <h3 className="unit__headline">{unit.headline}</h3>
-                </div>
+                  <div className="unit__head">
+                    <span className="unit__type">{unit.type}</span>
+                    <h3 className="unit__headline">{unit.headline}</h3>
+                  </div>
 
-                <dl className="unit__specs">
-                  <div className="unit__spec">
-                    <dd>
-                      {unit.area}
-                      <small>{unit.areaUnit}</small>
-                    </dd>
-                    <dt>Carpet</dt>
-                  </div>
-                  <div className="unit__spec">
-                    <dd>{unit.beds}</dd>
-                    <dt>Bedrooms</dt>
-                  </div>
-                  <div className="unit__spec">
-                    <dd>{unit.baths}</dd>
-                    <dt>Bathrooms</dt>
-                  </div>
-                </dl>
+                  <dl className="unit__specs">
+                    <div className="unit__spec">
+                      <dd>
+                        {unit.area}
+                        <small>{unit.areaUnit}</small>
+                      </dd>
+                      <dt>Carpet</dt>
+                    </div>
+                    <div className="unit__spec">
+                      <dd>{unit.beds}</dd>
+                      <dt>Bedrooms</dt>
+                    </div>
+                    <div className="unit__spec">
+                      <dd>{unit.baths}</dd>
+                      <dt>Bathrooms</dt>
+                    </div>
+                  </dl>
 
-                <dl className="unit__meta">
-                  <div>
-                    <dt>Aspect</dt>
-                    <dd>{unit.aspect}</dd>
-                  </div>
-                  <div>
-                    <dt>Floors</dt>
-                    <dd>{unit.floors}</dd>
-                  </div>
-                </dl>
+                  <dl className="unit__meta">
+                    <div>
+                      <dt>Aspect</dt>
+                      <dd>{unit.aspect}</dd>
+                    </div>
+                    <div>
+                      <dt>Floors</dt>
+                      <dd>{unit.floors}</dd>
+                    </div>
+                  </dl>
 
-                <footer className="unit__foot">
-                  <div className="unit__price">
-                    <span>Guide price</span>
-                    <strong>{unit.price}</strong>
-                  </div>
-                  <Link to="/contact" className="unit__cta">
-                    Enquire →
-                  </Link>
-                </footer>
-              </article>
-            ))}
+                  <footer className="unit__foot">
+                    <div className="unit__price">
+                      <span>Guide price</span>
+                      <strong>{unit.price}</strong>
+                    </div>
+                    {/* Opens the enquiry popup rather than leaving for the
+                        contact page — the reader is looking at the plan they
+                        want to ask about. */}
+                    <button type="button" className="unit__cta" onClick={openEnquiry}>
+                      Enquire →
+                    </button>
+                  </footer>
+                </article>
+              ))}
+            </CardStack>
           </div>
         </div>
       </section>
@@ -357,25 +377,27 @@ export default function Details() {
           </p>
         </div>
         <div className="services reveal" data-reveal>
-          {SERVICES.map((service, index) => (
-            <article key={service.title} className="service">
-              <header className="service__head">
-                <span className="service__icon">
-                  <Icon name={service.icon} />
-                </span>
-                <span className="service__num">{String(index + 1).padStart(2, '0')}</span>
-              </header>
+          <CardStack>
+            {SERVICES.map((service, index) => (
+              <article key={service.title} className="service">
+                <header className="service__head">
+                  <span className="service__icon">
+                    <Icon name={service.icon} />
+                  </span>
+                  <span className="service__num">{String(index + 1).padStart(2, '0')}</span>
+                </header>
 
-              <h3 className="service__title">{service.title}</h3>
-              <p className="service__body">{service.body}</p>
+                <h3 className="service__title">{service.title}</h3>
+                <p className="service__body">{service.body}</p>
 
-              <ul className="service__covers">
-                {service.covers.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </article>
-          ))}
+                <ul className="service__covers">
+                  {service.covers.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </CardStack>
         </div>
       </section>
 
@@ -423,39 +445,41 @@ export default function Details() {
           </p>
         </div>
         <div className="testimonials reveal" data-reveal>
-          {TESTIMONIALS.map((item) => (
-            <figure key={item.name} className="quote">
-              <span className="quote__mark" aria-hidden="true">
-                &ldquo;
-              </span>
-
-              <div className="quote__top">
-                <span
-                  className="quote__stars"
-                  aria-label={`Rated ${item.rating} out of 5`}
-                  title={`Rated ${item.rating} out of 5`}
-                >
-                  {'★'.repeat(item.rating)}
+          <CardStack>
+            {TESTIMONIALS.map((item) => (
+              <figure key={item.name} className="quote">
+                <span className="quote__mark" aria-hidden="true">
+                  &ldquo;
                 </span>
-                <span className="quote__date">{item.date}</span>
-              </div>
 
-              <blockquote className="quote__body">{item.quote}</blockquote>
-
-              <figcaption className="quote__foot">
-                <span className="quote__avatar" aria-hidden="true">
-                  {item.initials}
-                </span>
-                <span className="quote__who">
-                  <span className="quote__name">{item.name}</span>
-                  <span className="quote__role">
-                    {item.unit} · {item.project}
+                <div className="quote__top">
+                  <span
+                    className="quote__stars"
+                    aria-label={`Rated ${item.rating} out of 5`}
+                    title={`Rated ${item.rating} out of 5`}
+                  >
+                    {'★'.repeat(item.rating)}
                   </span>
-                </span>
-                <span className="quote__verified">Verified owner</span>
-              </figcaption>
-            </figure>
-          ))}
+                  <span className="quote__date">{item.date}</span>
+                </div>
+
+                <blockquote className="quote__body">{item.quote}</blockquote>
+
+                <figcaption className="quote__foot">
+                  <span className="quote__avatar" aria-hidden="true">
+                    {item.initials}
+                  </span>
+                  <span className="quote__who">
+                    <span className="quote__name">{item.name}</span>
+                    <span className="quote__role">
+                      {item.unit} · {item.project}
+                    </span>
+                  </span>
+                  <span className="quote__verified">Verified owner</span>
+                </figcaption>
+              </figure>
+            ))}
+          </CardStack>
         </div>
       </section>
 
@@ -483,9 +507,11 @@ export default function Details() {
           </Link>
         </div>
         <div className="posts reveal" data-reveal>
-          {LATEST.map((post) => (
-            <PostCard key={post.slug} post={post} />
-          ))}
+          <CardStack>
+            {LATEST.map((post) => (
+              <PostCard key={post.slug} post={post} />
+            ))}
+          </CardStack>
         </div>
       </section>
 

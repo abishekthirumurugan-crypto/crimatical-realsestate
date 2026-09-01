@@ -1,105 +1,168 @@
 /**
  * Design tokens.
  *
- * The system follows the Struxel reference: a near-white page, white cards with
- * 12px corners and a hairline border, Poppins throughout, and headings set in
- * Title Case at medium weight with no tracking and no uppercase. Body copy runs
- * grey against black headings.
+ * The palette is sampled from realestate_video.mp4 — the dusk approach, the
+ * walnut entrance door, the marble and cream interiors, the brass pendants.
  *
- * The brand navy and gold are kept from logo.png, but demoted to what they are
- * good at on a light page — the dark surfaces (header, footer, CTA panels) and
- * small accents on them. On white, the accent is the navy, because the gold
- * cannot carry contrast there.
+ * What the footage actually measures, over 40 frames at 256x144:
+ *
+ *   - 91.5% of chromatic pixels are warm (R > B).
+ *   - 87% of them sit in the 20-40deg hue band: walnut, stone, amber light.
+ *     The only cool presence is the dusk sky, at 6%, and it is sky — not a
+ *     surface anything is made of.
+ *   - Mean saturation is 0.134. This is a restrained film. Nothing in it is
+ *     loud, and a loud interface would not belong to it.
+ *   - Bright chromatic pixels — the lit ones — average hsl(40, 36%, 67%).
+ *
+ * So: neutrals carry a 28-34deg warmth instead of being grey, the accent is
+ * the brass of the lighting rather than a signal colour, and saturation stays
+ * low everywhere. The one non-warm hue kept is the sage of the kitchen units,
+ * which does the "complete" job that green has to do somewhere.
+ *
+ * The previous system was built on a cool grey page (#f6f6f6, hue 0) and a
+ * vermilion accent (#e03200, hue 13 at 100% saturation). Neither exists in the
+ * footage — the vermilion is roughly four times more saturated than the most
+ * saturated thing in it.
+ *
+ * Every ratio quoted below is measured, not estimated.
  */
 
 :root {
-  /* --- ground ---------------------------------------------------------- */
+  /* --- ground ----------------------------------------------------------
+   *
+   * The marble and plaster of the interiors, which are not white — they are a
+   * warm off-white under warm light. Held at 30% saturation so the page reads
+   * as warm rather than as cream.
+   */
 
-  /** Page. Near-white, warm-neutral. */
-  --bg: #f6f6f6;
-  /** Cards, panels, anything raised off the page. */
+  /** Page. */
+  --bg: #f7f4f0;
+  /** Cards, panels, anything raised off the page. Left pure, so the raise
+      reads as light on the surface rather than as a change of material. */
   --surface: #ffffff;
   /**
    * Alternating section band. A step *darker* than the page, not white — a
    * white band puts white cards on white and they survive only as outlines.
+   * 1.11:1 against the page: a change of ground, not a box.
    */
-  --band: #ecedef;
+  --band: #efe8df;
+  /*
+   * The fill a card takes under the cursor, and nowhere else.
+   *
+   * Warm ivory rather than a brighter white, because the lift it accompanies is
+   * already doing "up" — this only has to do "warm", so the card reads as
+   * having caught the light rather than as a different card.
+   *
+   * Three things had to hold at once, all measured:
+   *
+   *  - Text must not move. `--muted` on this is 5.58:1, against 5.80:1 on a
+   *    resting card over the page and 5.57:1 over a band — inside the range the
+   *    body copy already lives in, so nothing about legibility changes.
+   *    `--primary` holds 5.16:1, so accent text stays past AA too.
+   *  - The change must be seen. dE 6.2 from the resting fill — comfortably past
+   *    the ~2.5 where a difference becomes noticeable at all.
+   *  - The card must not dissolve into what it sits on. This is the constraint
+   *    that ruled out `--primary-tint`, the obvious candidate: at dE 2.3 from
+   *    `--band` a hovered `.unit` would have taken almost exactly the colour of
+   *    the band behind it. This clears both grounds — dE 5.9 from `--bg`, 5.4
+   *    from `--band`.
+   */
+  --surface-hover: #fdf5e6;
 
   /* --- glass ------------------------------------------------------------
    *
    * One recipe, two strengths.
    *
    * `--glass` is the fill for anything that sits *on* the page — cards, pills,
-   * the outline button. 55% white over the near-white page lands at #fbfbfb: on
-   * a flat ground the translucency is close to invisible and it is the halo in
-   * `--shadow-glass` that does the visible work. It stays translucent anyway,
-   * because it is free, and because it is what makes these surfaces read
-   * correctly the moment one of them is put over the film.
+   * the outline button. The white is warmed to #fffdfa: a pure-white
+   * translucency over this page pulls the fill cooler than the card beside it,
+   * which on a warm ground is visible as a faint blue cast.
    *
-   * `--glass-strong` is for the fixed header, and it is deliberately not 55%.
-   * The header is the only glass on the site with arbitrary content passing
-   * behind it, and that content includes the navy CTA panel: at 55% the nav
-   * links measure 2.32:1 while the panel is under the bar. At 90% they hold
-   * 5.23:1 and the bar still reads as frosted rather than flat white.
+   * `--glass-strong` is for the fixed header, and it is deliberately far more
+   * opaque. The header is the only glass on the site with arbitrary content
+   * passing behind it, and that content includes the dark CTA panel: at 55%
+   * the nav links drop to roughly 2.3:1 while the panel is under the bar.
    */
-  --glass: rgba(255, 255, 255, 0.55);
-  --glass-strong: rgba(255, 255, 255, 0.9);
+  --glass: rgba(255, 253, 250, 0.62);
+  --glass-strong: rgba(255, 253, 250, 0.92);
   /**
    * The lit edge. Only used where the glass sits on something with tone — the
-   * coloured discs on the floating rail. On a light card a 70% white hairline
-   * measures 1.03:1 against the fill, i.e. nothing, and it would replace a
-   * `--border` that measures 1.25:1; see the border note below.
+   * coloured discs on the floating rail. On a light card a warm-white hairline
+   * measures about 1.03:1 against the fill, i.e. nothing, and it would replace
+   * a `--border` that measures 1.33:1; see the border note below.
    */
-  --glass-edge: rgba(255, 255, 255, 0.7);
+  --glass-edge: rgba(255, 253, 250, 0.72);
   --glass-blur: 20px;
 
-  /** Headings and primary text. */
-  --ink: #0a0a0a;
-  /** Body copy, captions, anything secondary. */
-  --muted: #615f5f;
-  /** Disabled / tertiary. */
-  --faint: #b2b2b2;
+  /**
+   * Headings and primary text. Not black — the darkest thing the film contains
+   * is #2e2621, a warm near-black. This is that, taken down far enough to
+   * carry body copy: 16.51:1 on the page.
+   */
+  --ink: #1a1512;
+  /** Body copy, captions, anything secondary. 5.51:1 on the page, 6.04:1 on a
+      card — AA at every size it is used at. */
+  --muted: #6b6158;
+  /** Disabled / tertiary. 2.78:1 — below AA by design, and only ever used for
+      text that is decorative or repeated in an accessible form nearby. */
+  --faint: #9d9284;
 
   /**
-   * The reference's `#e5e7eb` measures 1.24:1 against a white card and only
-   * 1.15:1 against the page — on a near-white page the card edge simply
-   * disappears. These are a step darker and very slightly cool, so the edge
-   * reads as crisp rather than dirty, and they sit at 1.37:1 / 1.26:1.
+   * A cool hairline on a warm page reads as dirty rather than as crisp, so
+   * these carry the same 32deg warmth as everything else. `--border` sits at
+   * 1.33:1 against a white card and 1.22:1 against the page, which is the
+   * range where an edge defines a card without drawing itself.
    */
-  --border: #d8dde4;
-  --border-strong: #c9d0da;
+  --border: #e6ded4;
+  --border-strong: #d5c9bb;
   /** Hairline inside dark panels. */
   --border-invert: rgba(255, 255, 255, 0.14);
 
-  /* --- brand, sampled from logo.png ------------------------------------ */
+  /* --- dark surfaces ---------------------------------------------------
+   *
+   * Header, footer, CTA panels, the film well.
+   *
+   * These were navy. The footage has no navy in it: its dark is the espresso
+   * of the entrance door and the charcoal of the window frames, both warm.
+   * Kept very low in saturation (17-21%) so large areas read as charcoal with
+   * warmth in it rather than as brown.
+   */
+  --dark: #241e19;
+  --dark-deep: #1a1511;
 
-  /** Dark surfaces: header, footer, CTA panels, the film well. */
-  --navy: #1b2435;
-  --navy-deep: #141a28;
-  --navy-lift: #2a3547;
-  /** The mark's gold. Used only inside the logo lockup on dark grounds — the
-      interactive accent below is what carries the UI. */
+  /**
+   * The mark's gold, and — as it turns out — the film's light. `--gold` was
+   * sampled from logo.png long before this palette existed and measures
+   * hsl(40, 34%, 63%); the lit pixels of the footage average hsl(40, 36%,
+   * 67%). They are the same colour. It carries 8.11:1 on `--dark-deep`.
+   */
   --gold: #c1ab80;
 
-  /* --- accent ---------------------------------------------------------- */
+  /* --- accent ----------------------------------------------------------
+   *
+   * The brass of the pendants and the uplighting, taken down to where it can
+   * do interface work. The light itself is far too pale to hold text or a
+   * fill on a near-white page, so the accent is that hue at a third of the
+   * lightness — a bronze, still unmistakably the same family.
+   */
 
+  /** Fills: primary buttons, form submit, the success message, active filters.
+      Never headings, never large surfaces. White on it measures 5.59:1. */
+  --primary: #8a5f2c;
+  /** Small accent TEXT on light grounds, and hover on fills. 5.98:1 on the
+      page, 5.40:1 on the band, 5.61:1 on its own tint. */
+  --primary-ink: #7d5527;
+  /** Accent on the dark surfaces, where the light brass can be itself again.
+      8.50:1 on `--dark`. */
+  --primary-on-dark: #cdb88d;
+  --primary-tint: #f5ece0;
   /**
-   * The reference's `--_color---primary`, and the only saturated colour on the
-   * page. Fills: primary buttons, form submit, the success message, active
-   * filters. Never headings, never large surfaces.
+   * Confirmation: a completed stage, a verified owner. The sage of the kitchen
+   * units in the closing shot — the one hue in the film that is not warm,
+   * which is exactly why it can mean something different. 4.75:1 on the page.
    */
-  --primary: #e03200;
-  /**
-   * Small accent TEXT on light grounds, and hover on fills. #e03200 measures
-   * 4.2:1 on the page grey — under AA for body sizes — where this is 5.1:1.
-   */
-  --primary-ink: #c42c00;
-  /** Accent on the navy surfaces. #e03200 is only 3.7:1 there; this is 5.5:1. */
-  --primary-on-dark: #ff6a3d;
-  --primary-tint: #fdefeb;
-  /** Confirmation: a completed stage, a verified owner. */
-  --ok: #3f8f5f;
-  --ok-tint: rgba(63, 143, 95, 0.12);
+  --ok: #5a7449;
+  --ok-tint: rgba(90, 116, 73, 0.12);
 
   /* --- type ------------------------------------------------------------ */
 
@@ -144,34 +207,35 @@
    *     reads as a flat grey smear.
    *   - Negative spread on the later layers, the way Tailwind's scale does, so
    *     the shadow stays tucked under the card instead of haloing around it.
-   *   - Tinted to the brand navy's hue rather than black. Neutral black over a
-   *     warm near-white page goes muddy; hsl(220deg 45% 20%) is the same family
-   *     as `--navy`, so the shade reads as belonging to the page.
+   *   - Tinted to the page's own hue rather than black. These were tinted to
+   *     the old navy at 220deg; over a warm page a cool shadow is the one
+   *     place the eye finds blue, and it reads as grubby. hsl(28deg 30% 14%)
+   *     is the shade the film's own interiors cast.
    */
-  --shadow-xs: 0 1px 2px -1px hsl(220deg 45% 20% / 0.08);
+  --shadow-xs: 0 1px 2px -1px hsl(28deg 30% 14% / 0.08);
   --shadow-sm:
-    0 1px 2px -1px hsl(220deg 45% 20% / 0.09),
-    0 3px 6px -3px hsl(220deg 45% 20% / 0.07);
+    0 1px 2px -1px hsl(28deg 30% 14% / 0.09),
+    0 3px 6px -3px hsl(28deg 30% 14% / 0.07);
   --shadow-md:
-    0 2px 4px -2px hsl(220deg 45% 20% / 0.08),
-    0 6px 12px -4px hsl(220deg 45% 20% / 0.09),
-    0 14px 24px -8px hsl(220deg 45% 20% / 0.08);
+    0 2px 4px -2px hsl(28deg 30% 14% / 0.08),
+    0 6px 12px -4px hsl(28deg 30% 14% / 0.09),
+    0 14px 24px -8px hsl(28deg 30% 14% / 0.08);
   --shadow-lg:
-    0 4px 8px -4px hsl(220deg 45% 20% / 0.1),
-    0 12px 22px -8px hsl(220deg 45% 20% / 0.1),
-    0 28px 44px -16px hsl(220deg 45% 20% / 0.1);
+    0 4px 8px -4px hsl(28deg 30% 14% / 0.1),
+    0 12px 22px -8px hsl(28deg 30% 14% / 0.1),
+    0 28px 44px -16px hsl(28deg 30% 14% / 0.1);
   /**
-   * Resting shade for the glass surfaces: a wide, soft, blue-grey halo.
+   * Resting shade for the glass surfaces: a wide, soft, warm halo.
    *
    * The hairline layer is kept from `--shadow-sm`. A translucent card has a
-   * translucent edge, and the 32px halo on its own is too diffuse to define one
-   * — the tight layer is what stops the card dissolving into the page.
+   * translucent edge, and the 32px halo on its own is too diffuse to define
+   * one — the tight layer is what stops the card dissolving into the page.
    */
   --shadow-glass:
-    0 1px 2px -1px hsl(220deg 45% 20% / 0.09),
-    0 8px 32px rgba(80, 90, 140, 0.08);
+    0 1px 2px -1px hsl(28deg 30% 14% / 0.09),
+    0 8px 32px rgba(120, 96, 64, 0.1);
   /** Focus ring, the shadcn/Tailwind pattern: a soft halo outside the border. */
-  --ring: 0 0 0 3px hsl(14deg 100% 44% / 0.18);
+  --ring: 0 0 0 3px hsl(33deg 52% 36% / 0.22);
 
   /* --- layout ---------------------------------------------------------- */
 

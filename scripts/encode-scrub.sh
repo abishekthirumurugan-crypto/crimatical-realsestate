@@ -15,6 +15,7 @@ WIDTH=1280
 GOP=10
 CRF=26
 FPS=24
+PRESET=slow
 # Optional filter applied BEFORE the scale — grading, cropping, de-noise.
 PREFILTER=""
 # Set when the input is an image sequence rather than a video file.
@@ -31,11 +32,12 @@ Usage: encode-scrub.sh -i INPUT -o OUTPUT_BASE [options]
   -c  CRF quality, lower is better                (default 26)
   -f  Frame rate                                  (default 24)
   -p  ffmpeg filter chain to apply before scaling (e.g. a tone curve)
+  -e  x264 preset                                 (default slow)
   -s  Treat the input as an image sequence
 USAGE
 }
 
-while getopts "i:o:w:g:c:f:p:sh" opt; do
+while getopts "i:o:w:g:c:f:p:e:sh" opt; do
   case "$opt" in
     i) INPUT="$OPTARG" ;;
     o) OUTPUT="$OPTARG" ;;
@@ -44,6 +46,7 @@ while getopts "i:o:w:g:c:f:p:sh" opt; do
     c) CRF="$OPTARG" ;;
     f) FPS="$OPTARG" ;;
     p) PREFILTER="$OPTARG" ;;
+    e) PRESET="$OPTARG" ;;
     s) FROM_STILLS=1 ;;
     h) usage; exit 0 ;;
     *) usage; exit 1 ;;
@@ -72,12 +75,12 @@ if [ -n "$PREFILTER" ]; then
   VF="${PREFILTER},${VF}"
 fi
 
-echo "Encoding ${INPUT} -> ${OUTPUT}.mp4  (${WIDTH}px, GOP ${GOP}, CRF ${CRF}, ${FPS} fps)"
+echo "Encoding ${INPUT} -> ${OUTPUT}.mp4  (${WIDTH}px, GOP ${GOP}, CRF ${CRF}, ${FPS} fps, preset ${PRESET})"
 [ -n "$PREFILTER" ] && echo "  prefilter       ${PREFILTER}"
 
 ffmpeg -y -v error "${INPUT_ARGS[@]}" -an \
   -c:v libx264 -profile:v high -level:v 4.1 -pix_fmt yuv420p \
-  -crf "$CRF" -preset slow -tune film \
+  -crf "$CRF" -preset "$PRESET" -tune film \
   -g "$GOP" -keyint_min "$GOP" -sc_threshold 0 \
   -bf 0 \
   -r "$FPS" \

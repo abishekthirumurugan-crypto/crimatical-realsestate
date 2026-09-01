@@ -8,6 +8,23 @@ html {
   /* The film owns scroll position; smooth-scroll would fight the scrub. */
   scroll-behavior: auto;
   -webkit-text-size-adjust: 100%;
+  /**
+   * A horizontal scrollbar on a scroll-driven page is a bug multiplier.
+   *
+   * On `html`, not on `body`, and that is load-bearing rather than tidiness.
+   * CSS computes the other axis of `overflow` to `auto` whenever one axis is
+   * `hidden` — so `overflow-x: hidden` on `body` quietly made BODY a scroll
+   * container. Every `animation-timeline: view()` in motion.css then resolved
+   * against body's scrollport instead of the viewport, reported `progress: 0`
+   * for anything past the first screen, and held those elements at the start of
+   * their animation — which is `opacity: 0`. Sections below the fold were
+   * invisible.
+   *
+   * Declared here the root scroller stays the viewport, `overflow-x` still
+   * propagates to it, and the timelines resolve against the thing that is
+   * actually scrolling.
+   */
+  overflow-x: hidden;
 }
 
 body {
@@ -20,8 +37,6 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* A horizontal scrollbar on a scroll-driven page is a bug multiplier. */
-  overflow-x: hidden;
 }
 
 /**
@@ -68,6 +83,73 @@ p {
   text-wrap: pretty;
 }
 
+/*
+ * Prose sets justified on a phone, ragged-right everywhere else.
+ *
+ * A phone column is a 350px measure — around 45 characters — and at that width
+ * a flush right edge is worth having: the card's own edge is close enough that
+ * a ragged one reads as a second, wobbling margin beside it. The wider the
+ * measure gets the less that holds, and by the time the grid is two or three
+ * columns up the desktop is setting the same paragraphs at a comfortable
+ * measure where ragged-right is simply the better setting. So this stops at the
+ * site's mobile line, 40rem, which is the same 640px the components query.
+ *
+ * `hyphens: auto` is not decoration here, it is the half that makes the rest
+ * safe. Justification works by stretching the spaces on a line until the line
+ * fills, and a narrow measure gives it few spaces to spread that slack across —
+ * so a line holding one long word ("specification", "Perungudi") opens gaps you
+ * can see rivers running down. Letting the browser break the word puts the
+ * slack back into the line instead of into the gaps. It works because
+ * `<html lang="en">` is set: without a language the browser has no dictionary
+ * to hyphenate against and the property silently does nothing.
+ *
+ * The pull-quote is deliberately not in this list. It is set at 204px — half
+ * this measure again — where there is no hyphenation dense enough to keep a
+ * justified line honest, and it is a display element rather than prose.
+ */
+/*
+ * The journal entry is justified at every width, not only on a phone.
+ *
+ * The rule below stops at 40rem because a justified line needs enough words to
+ * spread its slack across, and most of this site's prose sits in a card that is
+ * narrow on a phone and narrow again in a three-up grid on a desktop. The entry
+ * is the exception: it is one column of long-form text at 76 to 83 characters,
+ * which is the measure justification was made for. The wider the line, the more
+ * spaces there are to absorb the stretch and the smaller each one has to be —
+ * so this is the safest place on the site to set it, not the riskiest.
+ */
+.entry__body p,
+.entry__body li,
+.entry__excerpt {
+  text-align: justify;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+
+@media (max-width: 40rem) {
+  .page-hero__lede,
+  .section__intro,
+  .split__body p,
+  .split__list li,
+  .entry__body p,
+  .entry__excerpt,
+  .panel p,
+  .faq__a,
+  .value__body,
+  .person__note,
+  .service__body,
+  .post-card__excerpt,
+  .contact__note,
+  .contact__disclaimer,
+  .stage-card__note,
+  .mstone__event,
+  .site-footer__blurb {
+    text-align: justify;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+  }
+}
+
 a {
   color: inherit;
 }
@@ -83,10 +165,12 @@ img {
   border-radius: 2px;
 }
 
-/* On dark surfaces the ring has to go the other way. The film is light now, so
-   it takes the default ring like the rest of the page. */
+/* On dark surfaces the ring has to go the other way. The film is one of them
+   again: `--primary` is mid-tone and measured roughly 1:1 against the
+   walkthrough's own mean luminance, i.e. a focus ring that is not there. */
 .site-footer :focus-visible,
-.panel :focus-visible {
+.panel :focus-visible,
+.film :focus-visible {
   outline-color: var(--primary-on-dark);
 }
 

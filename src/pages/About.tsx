@@ -1,5 +1,6 @@
 import PageHero from '../components/PageHero';
 import Icon from '../components/Icon';
+import CardStack from '../components/CardStack';
 import { Link } from '../lib/router';
 import { useReveals } from '../hooks/useReveals';
 import { ABOUT, COMPANY } from '../content/site';
@@ -63,15 +64,17 @@ export default function About() {
           </div>
 
           <div className="values reveal" data-reveal>
-            {ABOUT.values.map((value) => (
-              <article key={value.title} className="value">
-                <span className="value__icon">
-                  <Icon name={value.icon} />
-                </span>
-                <h3 className="value__title">{value.title}</h3>
-                <p className="value__body">{value.body}</p>
-              </article>
-            ))}
+            <CardStack>
+              {ABOUT.values.map((value) => (
+                <article key={value.title} className="value">
+                  <span className="value__icon">
+                    <Icon name={value.icon} />
+                  </span>
+                  <h3 className="value__title">{value.title}</h3>
+                  <p className="value__body">{value.body}</p>
+                </article>
+              ))}
+            </CardStack>
           </div>
         </div>
       </section>
@@ -117,20 +120,22 @@ export default function About() {
           </div>
 
           <div className="team reveal" data-reveal>
-            {ABOUT.team.map((person) => (
-              <article key={person.name} className="person">
-                <header className="person__head">
-                  <span className="person__avatar" aria-hidden="true">
-                    {person.initials}
-                  </span>
-                  <span className="person__focus">{person.focus}</span>
-                </header>
-                <h3 className="person__name">{person.name}</h3>
-                <div className="person__role">{person.role}</div>
-                <p className="person__note">{person.note}</p>
-                <div className="person__since">With us since {person.since}</div>
-              </article>
-            ))}
+            <CardStack>
+              {ABOUT.team.map((person) => (
+                <article key={person.name} className="person">
+                  <header className="person__head">
+                    <span className="person__avatar" aria-hidden="true">
+                      {person.initials}
+                    </span>
+                    <span className="person__focus">{person.focus}</span>
+                  </header>
+                  <h3 className="person__name">{person.name}</h3>
+                  <div className="person__role">{person.role}</div>
+                  <p className="person__note">{person.note}</p>
+                  <div className="person__since">With us since {person.since}</div>
+                </article>
+              ))}
+            </CardStack>
           </div>
         </div>
       </section>

@@ -1,14 +1,16 @@
 /*
  * React Bits — AccordionGallery, upstream CSS.
  *
- * The only change is the panel resting background: #0a0713 is a purple-black
- * that does not exist anywhere in this palette, so it uses the page's own
- * `--ink` instead. It is only visible for the moment before an image decodes.
+ * Two changes, both the same change: upstream is built around a purple-black
+ * (#0a0713 resting, #060010 overlay) that exists nowhere in this palette, and
+ * a white accent. All three now come from the tokens — `--ink` for the panel
+ * behind an image that has not decoded yet, `--dark-deep` for the dim, and the
+ * film's own brass for the active indicator.
  */
 
 .accordion-gallery {
-  --ag-accent: #ffffff;
-  --ag-overlay: #060010;
+  --ag-accent: var(--primary-on-dark);
+  --ag-overlay: var(--dark-deep);
   --ag-text: #ffffff;
   --ag-gap: 10px;
   --ag-radius: 16px;
@@ -40,16 +42,21 @@
   outline: none;
   transform-style: preserve-3d;
   transform-origin: center center;
-  background: var(--ink, #0a0a0a);
-  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.8);
+  background: var(--ink);
+  box-shadow: 0 10px 30px -18px hsl(28deg 30% 14% / 0.8);
   will-change: flex-grow, transform;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* The ring is two layers now. `--ag-accent` is brass so that the active
+   indicator belongs to the palette, but brass alone is not a dependable focus
+   ring over a photograph that might be pale; the dark halo outside it is what
+   guarantees the ring is visible whatever the image behind it. */
 .ag-panel:focus-visible {
   box-shadow:
     0 0 0 2px var(--ag-accent),
-    0 10px 30px -18px rgba(0, 0, 0, 0.8);
+    0 0 0 4px hsl(28deg 30% 14% / 0.55),
+    0 10px 30px -18px hsl(28deg 30% 14% / 0.8);
 }
 
 .ag-panel__frame {
@@ -130,17 +137,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0;
-  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 2px 14px hsl(28deg 30% 14% / 0.55);
 }
 
+/*
+ * Phones. The panels stack, and the component switches its layout maths to
+ * match — STACK_QUERY in AccordionGallery.tsx is this same width.
+ *
+ * The height is the whole of the fix for a tap doing nothing here. `flex-grow`
+ * divides a container's *free* space, and a column of `height: auto` has none
+ * to divide, so the tapped panel stayed exactly as tall as the closed ones. A
+ * definite height is what gives it something to grow into.
+ */
 @media (max-width: 520px) {
   .accordion-gallery {
     flex-direction: column;
     perspective: none;
-    height: auto !important;
+    height: min(76vh, 520px) !important;
   }
   .ag-panel {
-    min-height: 84px;
+    /* Low enough that three closed panels never crowd the open one out of its
+       share — at a 0.62 ratio they settle around 60px in a 520px column. */
+    min-height: 56px;
     transform: none !important;
   }
   .accordion-gallery .ag-panel__media {
