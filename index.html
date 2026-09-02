@@ -51,17 +51,37 @@
          the module bundle — it just lands only where it will be used.
 
          The width test mirrors the `media` on ScrollVideo's sources, so a phone
-         warms the 1.1 MB cut and never touches the 2.0 MB one. -->
+         warms the 1.1 MB cut and never touches the 2.0 MB one.
+
+         `crossOrigin` is load-bearing and its absence was a bug worth the note.
+         A preload is only reused when the request that follows matches it on
+         mode AND credentials, and `as="fetch"` always preloads in CORS mode
+         while `fetch()` defaults to credentials "same-origin" — which is what
+         `crossorigin="anonymous"` means. Without it the two never matched, the
+         warmed copy was thrown away, and the file was downloaded a second time:
+         measured at 1.76 MB on a phone against the 0.88 MB it should be, and
+         2.58 MB against 1.29 MB on a desktop. The browser says so in as many
+         words — "a preload for ... is not used because the request credentials
+         mode does not match" — which is only visible if someone is reading the
+         console on the one route that shows it.
+
+         Phones are skipped entirely. Every phone now runs the still sequence
+         and never fetches the mp4 at all, so warming it there is a 0.88 MB
+         download that nothing ever reads. The width test has to keep agreeing
+         with `pickFilmMode` in Home.tsx — if that changes, this must follow. -->
     <script>
       (function () {
         var path = location.pathname.replace(/\/+$/, '') || '/';
         if (path !== '/' && path !== '/index.html') return;
+
+        // The stills path fetches no video, so there is nothing to warm.
+        if (window.matchMedia('(max-width: 640px)').matches) return;
+
         var link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'fetch';
-        link.href = window.matchMedia('(max-width: 640px)').matches
-          ? '/video/walkthrough-mobile.mp4'
-          : '/video/walkthrough.mp4';
+        link.crossOrigin = 'anonymous';
+        link.href = '/video/walkthrough.mp4';
         document.head.appendChild(link);
       })();
     </script>

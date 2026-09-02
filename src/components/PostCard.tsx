@@ -35,8 +35,8 @@ export default function PostCard({
     <Link to={`/blog/${post.slug}`} className="post-card">
       <div className="post-card__media">
         <img
-          src={`/stills/${post.image}-600.jpg`}
-          srcSet={`/stills/${post.image}-600.jpg 600w, /stills/${post.image}-1200.jpg 1200w`}
+          src={`/stills/${post.image}-600.webp`}
+          srcSet={`/stills/${post.image}-600.webp 600w, /stills/${post.image}-1200.webp 1200w`}
           sizes={sizes}
           alt={post.imageAlt}
           loading="lazy"

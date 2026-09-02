@@ -38,8 +38,8 @@ export default function BlogPost({ slug }: BlogPostProps) {
             wanted immediately rather than on scroll. */}
         <figure className="entry__media shell">
           <img
-            src={`/stills/${post.image}-1200.jpg`}
-            srcSet={`/stills/${post.image}-600.jpg 600w, /stills/${post.image}-1200.jpg 1200w`}
+            src={`/stills/${post.image}-1200.webp`}
+            srcSet={`/stills/${post.image}-600.webp 600w, /stills/${post.image}-1200.webp 1200w`}
             sizes="(max-width: 76rem) 100vw, 1336px"
             alt={post.imageAlt}
             width={1200}

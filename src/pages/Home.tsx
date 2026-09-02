@@ -1,6 +1,6 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react';
 
-import ScrollVideo, { prefersNativeMedia, type ScrollVideoSource } from '../components/ScrollVideo';
+import ScrollVideo, { type ScrollVideoSource } from '../components/ScrollVideo';
 import ScrollFrames from '../components/ScrollFrames';
 import FilmDebug, { isFilmDebug } from '../components/FilmDebug';
 import FilmOverlay, { type FilmOverlayApi } from '../components/FilmOverlay';
@@ -103,6 +103,44 @@ const MOBILE_QUERY = '(max-width: 640px)';
  * Defined out here because `frameUrl` is a dependency of the preload effect: an
  * arrow rebuilt on every render would restart the download on every render.
  */
+/**
+ * Every phone runs the still sequence. Only a desktop scrubs the video.
+ *
+ * This was WebKit-only at first, on the reasoning that Android's video path
+ * works — Blink composites correctly, and a throttled-CPU measurement here said
+ * the video held up better on a slow device: 27 distinct frames against the
+ * sequence's 18. Tested on an actual Android phone, that was wrong, and the
+ * measurement was wrong in a way worth writing down.
+ *
+ * `Emulation.setCPUThrottlingRate` slows the CPU and nothing else. The GPU and
+ * the media decoder keep running at desktop speed, so a hardware-decoded video
+ * pays almost nothing for the throttle while 240 CPU-decoded stills pay all of
+ * it. The benchmark was not modelling a slow phone; it was modelling a fast
+ * phone with a slow CPU, which is not a device that exists. On real hardware
+ * the seek latency of the video decoder is the cost that dominates, and it is
+ * the one thing that emulation never showed.
+ *
+ * So the rule is now "a phone", not "a WebKit phone", and it cost 2.19MB
+ * against the video's 0.88MB to make Android as smooth as iOS. That is a real
+ * price on a phone network and it is the reason the override below exists.
+ *
+ * Desktop stays on the video: it measures 49.7fps with 1.0ms seeks there, the
+ * sequence would need a separate landscape encode, and none of the evidence
+ * says it is broken.
+ *
+ * `?frames=1` forces the stills, `?frames=0` forces the video — for settling
+ * exactly this kind of question on a device in someone's hand rather than from
+ * a laptop, which is how the original answer came to be wrong.
+ */
+function pickFilmMode(isMobile: boolean): boolean {
+  if (typeof location !== 'undefined') {
+    const forced = new URLSearchParams(location.search).get('frames');
+    if (forced === '1') return true;
+    if (forced === '0') return false;
+  }
+  return isMobile;
+}
+
 const FRAME_COUNT = 240;
 const FRAME_W = 480;
 const FRAME_H = 854;
@@ -155,7 +193,7 @@ export default function Home() {
    * bug. If it turns out to be broken there too it wants its own landscape
    * sequence rather than this one stretched.
    */
-  const useFrames = isMobile && prefersNativeMedia();
+  const useFrames = pickFilmMode(isMobile);
 
   // A ref callback, not state: this runs on every rAF tick while scrubbing, and
   // the overlay writes straight to the DOM from here. Nothing re-renders.
@@ -211,7 +249,7 @@ export default function Home() {
         className="film"
         stageClassName="film__stage"
         sources={SOURCES}
-        poster="/video/walkthrough-poster.jpg"
+        poster="/video/walkthrough-poster.webp"
         fps={scrub.fps}
         // Six screens for ten seconds of film. One more than the construction
         // cut had, because this camera never stops: it is a continuous forward

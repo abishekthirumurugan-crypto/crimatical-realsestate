@@ -593,7 +593,21 @@
   align-items: center;
   justify-content: center;
   aspect-ratio: 16 / 10;
-  padding: 1.3rem 1.5rem;
+  /*
+   * The top padding is the badge's lane, not a margin.
+   *
+   * `.unit__left` is an absolutely positioned pill in this corner, and the plan
+   * underneath is centred by `preserveAspectRatio` into whatever the content
+   * box leaves — so with symmetric padding the drawing reached right under it.
+   * Measured: at 430px the pill sat 20px over the outer wall of types A and B,
+   * and at 390px it crossed the dashed balcony of type B by 6x13px. Nothing
+   * overflowed anything; the two simply occupied the same corner.
+   *
+   * 2.9rem clears the pill — 0.65rem of offset plus its ~1.8rem height, plus a
+   * few pixels so they do not merely touch. The diagram loses about a sixth of
+   * its height for it, which a schematic can afford and a collision cannot.
+   */
+  padding: 2.9rem 1.5rem 1.3rem;
   border-radius: calc(var(--radius) - 4px);
   background: var(--bg);
   /* The plan inherits this as its stroke. */

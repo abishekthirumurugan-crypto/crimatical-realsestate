@@ -418,22 +418,22 @@ export interface GalleryShot {
 
 export const GALLERY: GalleryShot[] = [
   {
-    image: '/gallery/shot-1.png',
+    image: '/gallery/shot-1.webp',
     label: 'Elevation',
     alt: 'The finished street elevation of Block A',
   },
   {
-    image: '/gallery/shot-2.png',
+    image: '/gallery/shot-2.webp',
     label: 'Balconies',
     alt: 'Balconies on the east face, seen from the approach',
   },
   {
-    image: '/gallery/shot-3.png',
+    image: '/gallery/shot-3.webp',
     label: 'Entrance',
     alt: 'The entrance canopy and lobby doors',
   },
   {
-    image: '/gallery/shot-4.png',
+    image: '/gallery/shot-4.webp',
     label: 'Terrace',
     alt: 'The shared terrace on the top level',
   },

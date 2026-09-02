@@ -23,8 +23,8 @@ function Still({ name, alt }: { name: string; alt: string }) {
   return (
     <div className="media">
       <img
-        src={`/stills/${name}-1200.jpg`}
-        srcSet={`/stills/${name}-600.jpg 600w, /stills/${name}-1200.jpg 1200w`}
+        src={`/stills/${name}-1200.webp`}
+        srcSet={`/stills/${name}-600.webp 600w, /stills/${name}-1200.webp 1200w`}
         sizes="(max-width: 60rem) 100vw, 45vw"
         alt={alt}
         loading="lazy"
@@ -251,8 +251,8 @@ export default function Details() {
               <article key={phase.name} className="stage-card">
                 <div className="stage-card__media">
                   <img
-                    src={`/stills/${phase.image}-600.jpg`}
-                    srcSet={`/stills/${phase.image}-600.jpg 600w, /stills/${phase.image}-1200.jpg 1200w`}
+                    src={`/stills/${phase.image}-600.webp`}
+                    srcSet={`/stills/${phase.image}-600.webp 600w, /stills/${phase.image}-1200.webp 1200w`}
                     sizes="(max-width: 52rem) 100vw, 16rem"
                     alt={phase.imageAlt}
                     loading="lazy"

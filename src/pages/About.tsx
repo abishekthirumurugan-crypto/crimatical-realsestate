@@ -35,8 +35,8 @@ export default function About() {
           <div className="split__media">
             <div className="media">
               <img
-                src="/stills/frame-1200.jpg"
-                srcSet="/stills/frame-600.jpg 600w, /stills/frame-1200.jpg 1200w"
+                src="/stills/frame-1200.webp"
+                srcSet="/stills/frame-600.webp 600w, /stills/frame-1200.webp 1200w"
                 sizes="(max-width: 60rem) 100vw, 45vw"
                 alt="Reinforced concrete frame under construction, cast by the company's own crews"
                 loading="lazy"
