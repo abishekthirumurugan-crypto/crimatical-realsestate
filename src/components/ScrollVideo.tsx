@@ -208,6 +208,16 @@ const SEEK_LATENCY_ALPHA = 0.2;
 const PROGRESS_EPSILON = 1 / 2000;
 /** Clamp on the rAF delta, so returning from a background tab doesn't jump the ease. */
 const MAX_TICK_MS = 100;
+/**
+ * How long to wait for a first painted frame before showing the film anyway.
+ *
+ * The loader holds until the decoder has actually put something on screen, so a
+ * decoder that never does would hold it forever — and a spinner that never ends
+ * is worse than the thing it is covering for. Failing open is safe here because
+ * the element keeps its `poster`: with nothing decoded, what appears is the
+ * poster frame, not the blank stage this whole mechanism exists to prevent.
+ */
+const FIRST_PAINT_TIMEOUT_MS = 5000;
 
 /* ---------------------------------------------------------------- helpers */
 
@@ -307,6 +317,50 @@ function usePrefersReducedMotion(enabled: boolean): boolean {
   }, [enabled]);
 
   return reduced;
+}
+
+/**
+ * Whether this engine has to be handed the file's own URL rather than a blob.
+ *
+ * The blob strategy downloads the file with `fetch()` and plays it from an
+ * `URL.createObjectURL` handle. That is a real win where it works — determinate
+ * progress, and scrubbing backwards never re-hits the network — but WebKit
+ * cannot use it for media. Object URLs do not answer byte-range requests, and
+ * range support is what iOS requires before it will decode a video. What you
+ * get instead is the shape observed on an iPhone:
+ *
+ *   - The fetch itself is ordinary XHR-level work and succeeds, so the loader
+ *     runs all the way to 100%.
+ *   - Safari parses enough of the blob to report `duration`, so `loadedmetadata`
+ *     fires and the component thinks it is ready.
+ *   - No frame is ever decoded, `play()` cannot prime it, and the poster is
+ *     dropped the moment a source is attached. Black stage, overlay copy on top
+ *     of nothing.
+ *
+ * Every browser on iOS is WebKit underneath — Chrome and Firefox there are
+ * skins over the same engine — so the test is the platform, not the brand.
+ * Desktop Safari is included because it is the same media stack.
+ *
+ * Sniffing the engine is not usually the right instinct, and it is here only
+ * because the alternative is worse: the outcome cannot be feature-detected
+ * before committing to it. `MediaSource`/range support cannot be queried for a
+ * blob without loading one, and finding out by waiting for a paint that never
+ * comes costs the reader the whole timeout on the one platform that fails.
+ */
+let nativeMediaPreferred: boolean | null = null;
+
+export function prefersNativeMedia(): boolean {
+  if (nativeMediaPreferred !== null) return nativeMediaPreferred;
+  if (typeof navigator === 'undefined') return (nativeMediaPreferred = false);
+
+  const ua = navigator.userAgent;
+  const iOS =
+    /iP(hone|ad|od)/.test(ua) ||
+    // iPadOS 13+ claims to be a Mac; the touch points are what give it away.
+    (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const safari = /Safari/.test(ua) && !/Chrome|Chromium|Android|Edg|OPR|SamsungBrowser/.test(ua);
+
+  return (nativeMediaPreferred = iOS || safari);
 }
 
 /* --------------------------------------------------------- blob preloader */
@@ -505,17 +559,34 @@ export default function ScrollVideo({
   );
 
   const [ready, setReady] = useState(false);
+  /**
+   * Whether a frame has actually been PUT ON SCREEN, as opposed to `ready`,
+   * which only says metadata arrived. On iOS those are far apart: a video can
+   * report its duration, satisfy every seek, and still composite nothing until
+   * it has been played once. Revealing on `ready` is what showed a blank stage.
+   */
+  const [painted, setPainted] = useState(false);
   const [progress, setProgress] = useState(0);
 
   const reducedMotion = usePrefersReducedMotion(respectReducedMotion);
   const source = useResolvedSource(sources);
+
+  /*
+   * WebKit is given the file's own URL even when the caller asked for a blob —
+   * see `prefersNativeMedia`. It costs the determinate progress bar there (no
+   * `fetch`, so no Content-Length to count), which the loader already handles by
+   * showing an indeterminate rule. A progress bar that is honest about a video
+   * that will never play is not worth keeping.
+   */
+  const effectivePreload: PreloadStrategy =
+    preloadStrategy === 'blob' && prefersNativeMedia() ? 'native' : preloadStrategy;
   const {
     url,
     progress: downloadProgress,
     received,
     total,
     error: loadError,
-  } = useVideoBytes(source, preloadStrategy, crossOrigin);
+  } = useVideoBytes(source, effectivePreload, crossOrigin);
 
   /* --- mutable scrub state; deliberately outside React to avoid re-renders -- */
   const targetRef = useRef(0); // raw scroll progress, 0–1
@@ -532,6 +603,26 @@ export default function ScrollVideo({
   const durationRef = useRef(0);
   const committedProgressRef = useRef(0);
   const readyFiredRef = useRef(false);
+  /** Whether the muted play/pause that unlocks iOS compositing has succeeded. */
+  const primedRef = useRef(false);
+  const paintedRef = useRef(false);
+  const mirrorRef = useRef<HTMLCanvasElement>(null);
+
+  /**
+   * WebKit does not get to decide whether the picture appears.
+   *
+   * On iOS the `<video>` element is an unreliable thing to *look at*: it will
+   * decode and seek happily while compositing nothing, which is the black stage
+   * with the overlay copy on top of it. A canvas has no such opinion — whatever
+   * `drawImage` can read out of the decoder is what lands on screen. So on
+   * WebKit the element becomes a decoder we pull frames out of rather than
+   * something the reader sees, and the canvas is the picture.
+   *
+   * The element stays in the layout underneath, at full opacity, because Safari
+   * only permits muted autoplay for elements it treats as visible — being
+   * covered by the canvas is not the same as being hidden.
+   */
+  const mirrored = prefersNativeMedia();
 
   // Only the render-prop form of `children` reads `progress`; with plain
   // children or none, the state update is pure overhead.
@@ -545,6 +636,40 @@ export default function ScrollVideo({
   onErrorRef.current = onError;
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
+
+  const markPainted = useCallback(() => {
+    if (paintedRef.current) return;
+    paintedRef.current = true;
+    setPainted(true);
+  }, []);
+
+  /**
+   * Copy the decoder's current frame onto the canvas.
+   *
+   * Called only where the picture can actually have changed — a completed seek,
+   * a presented frame — so an idle film still costs nothing per frame, which is
+   * the property the rAF loop is careful about everywhere else.
+   */
+  const drawMirror = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = mirrorRef.current;
+    if (!video || !canvas || !video.videoWidth || !video.videoHeight) return;
+
+    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    try {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      markPainted();
+    } catch {
+      // A tainted (cross-origin) frame cannot be read back. Nothing to do here
+      // but leave the element itself showing through.
+      canvas.style.display = 'none';
+    }
+  }, [markPainted]);
 
   /* -------------------------------------------------- scroll -> target ---- */
 
@@ -712,35 +837,132 @@ export default function ScrollVideo({
       onErrorRef.current?.(new Error(video.error?.message || 'Video failed to load'));
     };
 
-    // iOS/Safari will not composite a frame until the element has been "played"
-    // at least once, even when every seek succeeds. A muted play/pause primes it.
+    /*
+     * iOS/Safari will not composite a video frame until the element has been
+     * "played" at least once, even when every seek succeeds. A muted play/pause
+     * primes it. Every seek after that paints; without it, none of them do and
+     * the stage stays the flat colour behind the video.
+     *
+     * The catch here used to be empty, with a comment saying the first user
+     * gesture would unlock it. Nothing was listening for one, so it never did.
+     * That is the whole of the "blank film on a fresh load" bug:
+     *
+     *   - Land on the page. iOS has had no interaction with this document yet,
+     *     so `play()` rejects. `prime` was bound `{ once: true }`, so that was
+     *     the only attempt that would ever be made. `loadedmetadata` still
+     *     fires, so `ready` flips true, the loader hides and the video is given
+     *     `opacity: 1` — over a decoder that has never presented a frame. Flat
+     *     background, and every scrub silently landing on nothing.
+     *   - Reload, and it happens again: a new document has no interaction
+     *     either, which is why refreshing never fixed it.
+     *   - Tap through to /details and back and it works, because tapping the
+     *     link WAS the interaction. Home remounts, this effect runs again, and
+     *     this time `play()` is allowed.
+     *
+     * So the retry the comment promised is now actually here. Any gesture that
+     * grants user activation re-attempts the prime, and the first success tears
+     * the listeners down. `touchend` is on the list and is what a scroll on a
+     * phone ends with, so on iOS the film unlocks on the reader's first swipe
+     * even if they never tap anything.
+     */
+    let detachGesture: (() => void) | undefined;
+    /*
+     * One attempt at a time, and it has to be a synchronous flag.
+     *
+     * A single tap fires `pointerup`, `touchend` AND `click`, so three
+     * listeners call this before any of them yields. `primedRef` is only set in
+     * the `.then()`, which is a microtask away, so it cannot stop the other two
+     * — measured, one tap produced three play() calls. On iOS that is three
+     * play/pause pairs on a video the reader is looking at.
+     */
+    let priming = false;
+
     const prime = () => {
-      const attempt = video.play();
-      if (attempt && typeof attempt.then === 'function') {
-        attempt
-          .then(() => video.pause())
-          .catch(() => {
-            /* autoplay refused; the first user gesture will unlock it */
-          });
+      if (primedRef.current || priming) return;
+      priming = true;
+
+      const settle = () => {
+        priming = false;
+        primedRef.current = true;
+        detachGesture?.();
+        // The decoder has a frame now; put it on the canvas immediately rather
+        // than waiting for the reader to move and cause a seek.
+        if (mirrored) drawMirror();
+        // The decoder can present now, but the scrub already wrote the seek it
+        // wanted and will not repeat itself. Forget it, so the next tick asks
+        // again and this time a frame lands.
+        lastSeekTimeRef.current = -1;
+        kick();
+      };
+
+      let attempt: Promise<void> | undefined;
+      try {
+        attempt = video.play();
+      } catch {
+        // Some engines throw synchronously instead of rejecting.
+        priming = false;
+        armGesture();
+        return;
       }
+
+      if (!attempt || typeof attempt.then !== 'function') {
+        // Older engines return nothing from play(); assume it took.
+        video.pause();
+        settle();
+        return;
+      }
+
+      attempt
+        .then(() => {
+          video.pause();
+          settle();
+        })
+        .catch(() => {
+          // Not refused forever — refused until this document has been
+          // interacted with. Wait for that and try again.
+          priming = false;
+          armGesture();
+        });
     };
+
+    function armGesture() {
+      if (detachGesture || primedRef.current) return;
+      const retry = () => prime();
+      // The four that grant user activation. `touchstart` deliberately is not
+      // one of them — the spec activates on `touchend`, so a swipe counts only
+      // once the finger lifts.
+      const events = ['pointerup', 'touchend', 'click', 'keydown'] as const;
+      events.forEach((e) => window.addEventListener(e, retry, { passive: true }));
+      detachGesture = () => {
+        events.forEach((e) => window.removeEventListener(e, retry));
+        detachGesture = undefined;
+      };
+    }
 
     video.addEventListener('loadedmetadata', markReady);
     video.addEventListener('canplaythrough', markReady);
     video.addEventListener('error', handleError);
     video.addEventListener('loadeddata', prime, { once: true });
 
+    // Armed up front rather than only from the `catch` above, because the
+    // failure that leaves the film blank can also be `loadeddata` never
+    // arriving at all — in which case `prime` is never called and there would
+    // be nothing to fail and arm the retry.
+    armGesture();
+
     // The element may already be past those events (cached blob, fast decode),
     // in which case no further one will ever fire.
     if (video.readyState >= 1) markReady();
+    if (video.readyState >= 2) prime();
 
     return () => {
       video.removeEventListener('loadedmetadata', markReady);
       video.removeEventListener('canplaythrough', markReady);
       video.removeEventListener('error', handleError);
       video.removeEventListener('loadeddata', prime);
+      detachGesture?.();
     };
-  }, [url, kick]);
+  }, [url, kick, mirrored, drawMirror]);
 
   useEffect(() => {
     if (loadError) onErrorRef.current?.(loadError);
@@ -770,7 +992,7 @@ export default function ScrollVideo({
       received,
       total,
       progress: downloadProgress,
-      downloaded: Boolean(url) && preloadStrategy === 'blob' && downloadProgress === 1,
+      downloaded: Boolean(url) && effectivePreload === 'blob' && downloadProgress === 1,
       ready,
       videoWidth: video?.videoWidth ?? 0,
       videoHeight: video?.videoHeight ?? 0,
@@ -780,13 +1002,21 @@ export default function ScrollVideo({
     // `sources` is intentionally not a dep: it is a fresh array each render in
     // most call sites, and `source` already captures the only part that matters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source, received, total, downloadProgress, url, ready, preloadStrategy, loadError]);
+  }, [source, received, total, downloadProgress, url, ready, effectivePreload, loadError]);
 
   /* ------------------------------------------------------- seek gating ---- */
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !ready) return;
+
+    /*
+     * Fail open. A decoder that never paints must not hold the loader forever —
+     * the element still has its poster, so what shows is the first frame as a
+     * still rather than an empty stage, and the gesture retry keeps working
+     * underneath so the film takes over as soon as it can.
+     */
+    const paintTimer = window.setTimeout(markPainted, FIRST_PAINT_TIMEOUT_MS);
 
     const release = () => {
       if (!seekPendingRef.current) return;
@@ -850,17 +1080,40 @@ export default function ScrollVideo({
     if (useRvfc) {
       const onFrame = (_now: number, metadata: FrameMetadata) => {
         handle = video.requestVideoFrameCallback!(onFrame);
+        // ANY frame means the decoder produced something, whether or not it is
+        // the one the scrub asked for. Mirror it, and let the loader go.
+        if (mirrored) drawMirror();
+        markPainted();
         if (isAskedFor(metadata.mediaTime)) release();
       };
       handle = video.requestVideoFrameCallback!(onFrame);
     }
+
+    /*
+     * `seeked` doubles as the paint signal where rVFC is missing.
+     *
+     * rVFC is the honest one — it fires when a frame is PRESENTED — but Safari
+     * only shipped it in 15.4, and an older iPhone is exactly the device this
+     * is protecting. A completed seek is weaker evidence (the decoder resolved
+     * the seek, which is not quite "and drew it") but it is the best signal
+     * those versions offer, and the timeout below covers the rest.
+     */
+    // A completed seek is the only moment the picture can change, so it is the
+    // only moment the mirror needs redrawing.
+    const onSeeked = () => {
+      if (mirrored) drawMirror();
+      markPainted();
+    };
+    video.addEventListener('seeked', onSeeked);
     video.addEventListener('seeked', release);
 
     return () => {
+      window.clearTimeout(paintTimer);
       if (useRvfc && handle !== null) video.cancelVideoFrameCallback?.(handle);
+      video.removeEventListener('seeked', onSeeked);
       video.removeEventListener('seeked', release);
     };
-  }, [ready, kick, fps]);
+  }, [ready, kick, fps, mirrored, drawMirror, markPainted]);
 
   /* -------------------------------------------------- ambient backdrop ---- */
 
@@ -1009,6 +1262,10 @@ export default function ScrollVideo({
           />
         )}
 
+        {mirrored && (
+          <canvas ref={mirrorRef} aria-hidden="true" style={{ ...MIRROR_STYLE, objectFit }} />
+        )}
+
         <video
           ref={setVideo}
           src={url ?? undefined}
@@ -1026,10 +1283,30 @@ export default function ScrollVideo({
           disableRemotePlayback
           tabIndex={-1}
           aria-hidden="true"
-          style={{ ...VIDEO_STYLE, objectFit, opacity: ready ? 1 : 0, ...videoStyle }}
+          /*
+           * Never faded out, where this used to be `opacity: ready ? 1 : 0`.
+           *
+           * Two reasons, and the loader covers it either way — it is opaque and
+           * `inset: 0`, so the reader sees the loader and nothing else until it
+           * goes.
+           *
+           * The first is the poster. A hidden element hides its `poster` too,
+           * so the fail-open path below had nothing to fail open TO. Visible,
+           * the worst case stops being an empty stage and becomes a still.
+           *
+           * The second is Safari's own rule. It permits muted autoplay only for
+           * elements it considers visible, and pauses ones that are not — so
+           * hiding the video while waiting to prime it may well have been part
+           * of why the prime was refused. That part is reasoning rather than
+           * measurement: it is not a heuristic Apple documents precisely, and I
+           * have no iPhone here to prove it on. It costs nothing to satisfy.
+           */
+          style={{ ...VIDEO_STYLE, objectFit, ...videoStyle }}
         />
 
-        {!ready &&
+        {/* Held until a frame is actually on screen, not merely until metadata
+            arrived — see `painted`. */}
+        {!painted &&
           (renderLoader ? (
             renderLoader(downloadProgress)
           ) : (
@@ -1041,7 +1318,9 @@ export default function ScrollVideo({
             </div>
           ))}
 
-        {ready && (typeof children === 'function' ? children(progress) : children)}
+        {/* The overlay belongs to the film, so it arrives with the film rather
+            than sitting over the loading screen. */}
+        {painted && (typeof children === 'function' ? children(progress) : children)}
       </div>
 
       <style>{KEYFRAMES}</style>
@@ -1079,6 +1358,21 @@ const BACKDROP_STYLE: CSSProperties = {
   opacity: 0,
   transition: 'opacity 400ms ease',
   pointerEvents: 'none',
+};
+
+/**
+ * The canvas that IS the picture on WebKit. Same box as the video, one layer up.
+ *
+ * `object-fit` is handed the same value the video gets, so the crop is the one
+ * the caller asked for and the two elements cannot disagree about framing.
+ */
+const MIRROR_STYLE: CSSProperties = {
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  pointerEvents: 'none',
+  zIndex: 1,
 };
 
 const VIDEO_STYLE: CSSProperties = {

@@ -1,6 +1,8 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react';
 
-import ScrollVideo, { type ScrollVideoSource } from '../components/ScrollVideo';
+import ScrollVideo, { prefersNativeMedia, type ScrollVideoSource } from '../components/ScrollVideo';
+import ScrollFrames from '../components/ScrollFrames';
+import FilmDebug, { isFilmDebug } from '../components/FilmDebug';
 import FilmOverlay, { type FilmOverlayApi } from '../components/FilmOverlay';
 import Logo from '../components/Logo';
 import { PROJECT, SPACES } from '../content/project';
@@ -17,7 +19,13 @@ import { PROJECT, SPACES } from '../content/project';
 const SOURCES: ScrollVideoSource[] = [
   {
     src: '/video/walkthrough-mobile.mp4',
-    type: 'video/mp4; codecs="avc1.64001f"',
+    // High@4.1 — `avc1.640029`, not the `64001f` (High@3.1) this used to claim.
+    // Both cuts come out of encode-scrub.sh, which pins `-level:v 4.1`, so the
+    // string has to say 4.1 whatever the frame size is. Nothing broke on it:
+    // `canPlayType` answers for the codec a device supports rather than for the
+    // file, and every browser says yes to 3.1, so the source was still picked.
+    // It was simply describing a file that does not exist.
+    type: 'video/mp4; codecs="avc1.640029"',
     media: '(max-width: 640px)',
   },
   { src: '/video/walkthrough.mp4', type: 'video/mp4; codecs="avc1.640029"' },
@@ -84,6 +92,22 @@ const MOBILE = { fps: 24, smoothing: 0.6 };
 /** Mirrors the `media` on the mobile source, so file and settings agree. */
 const MOBILE_QUERY = '(max-width: 640px)';
 
+/*
+ * The still sequence WebKit gets on a phone instead of the film.
+ *
+ * Same cut, same 480x854, same 24 frames a second — so the scroll geometry and
+ * the stepping are identical to the video and nothing else on the page has to
+ * know which one is running. 2.9MB against the video's 900KB, paid only by the
+ * engine that cannot play the video at all. See ScrollFrames.tsx.
+ *
+ * Defined out here because `frameUrl` is a dependency of the preload effect: an
+ * arrow rebuilt on every render would restart the download on every render.
+ */
+const FRAME_COUNT = 240;
+const FRAME_W = 480;
+const FRAME_H = 854;
+const frameUrl = (i: number) => `/frames/mobile/${String(i).padStart(3, '0')}.webp`;
+
 /**
  * Home is the film and nothing else.
  *
@@ -102,6 +126,10 @@ const MOBILE_QUERY = '(max-width: 640px)';
  */
 export default function Home() {
   const overlayRef = useRef<FilmOverlayApi | null>(null);
+  // Only for `/?debug` — see FilmDebug. Held unconditionally because hooks
+  // cannot be called conditionally; it costs one ref.
+  const filmRef = useRef<HTMLVideoElement | null>(null);
+  const debugging = isFilmDebug();
 
   // Read once per media-query change rather than per frame. `useSyncExternal-
   // Store` because the query is state outside React, and reading it during
@@ -117,6 +145,17 @@ export default function Home() {
     () => false,
   );
   const scrub = isMobile ? MOBILE : DESKTOP;
+
+  /*
+   * A phone running WebKit gets the stills; everything else gets the film.
+   *
+   * Narrow on purpose. Desktop Safari is left on the video — it may well have
+   * the same compositing fault, but the sequence that exists is the portrait
+   * 480px cut, and shipping that to a 1440px window would be worse than the
+   * bug. If it turns out to be broken there too it wants its own landscape
+   * sequence rather than this one stretched.
+   */
+  const useFrames = isMobile && prefersNativeMedia();
 
   // A ref callback, not state: this runs on every rAF tick while scrubbing, and
   // the overlay writes straight to the DOM from here. Nothing re-renders.
@@ -151,6 +190,23 @@ export default function Home() {
         apartment, from the street to the terrace, scrubbed by scroll
       </h1>
 
+      {useFrames ? (
+        <ScrollFrames
+          className="film"
+          stageClassName="film__stage"
+          frameUrl={frameUrl}
+          count={FRAME_COUNT}
+          frameWidth={FRAME_W}
+          frameHeight={FRAME_H}
+          scrollLengthVh={6}
+          smoothing={scrub.smoothing}
+          objectFit="cover"
+          onProgress={handleProgress}
+          renderLoader={renderLoader}
+        >
+          <FilmOverlay spaces={SPACES} apiRef={overlayRef} />
+        </ScrollFrames>
+      ) : (
       <ScrollVideo
         className="film"
         stageClassName="film__stage"
@@ -193,9 +249,13 @@ export default function Home() {
         videoStyle={{ transform: 'translateZ(0)' }}
         onProgress={handleProgress}
         renderLoader={renderLoader}
+        videoRef={filmRef}
       >
         <FilmOverlay spaces={SPACES} apiRef={overlayRef} />
       </ScrollVideo>
+      )}
+
+      {debugging && <FilmDebug videoRef={filmRef} />}
     </>
   );
 }
