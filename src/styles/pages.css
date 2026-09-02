@@ -50,7 +50,7 @@
 .figures {
   margin-top: clamp(1.5rem, 2.5vw, 2.25rem);
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -86,7 +86,7 @@
 
 .values {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -202,7 +202,7 @@
 
 .team {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -310,7 +310,7 @@
 
 .posts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
   gap: 1.5rem;
 }
 
@@ -689,7 +689,7 @@
 
 .entry__nav {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
   gap: 1.25rem;
   padding-bottom: var(--section-y);
 }
@@ -772,7 +772,7 @@
 
 .field-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
   gap: 1.1rem;
 }
 

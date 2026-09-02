@@ -25,6 +25,26 @@ html {
    * actually scrolling.
    */
   overflow-x: hidden;
+  /*
+   * `clip` where it is understood, and it is not a synonym for the line above.
+   *
+   * `hidden` is a scroll container that happens to have no scrollbar, so its
+   * content is still scrollable — programmatically everywhere, and by finger on
+   * iOS, which pans the visual viewport across an overflowing root whatever the
+   * root says. `clip` is not a scroll container at all: there is no scroll
+   * position to move, so nothing can pan to the overflow.
+   *
+   * It also sidesteps the propagation the comment above is about, rather than
+   * routing around it — `clip` pairs with `visible` on the other axis without
+   * forcing it to `auto`, so `overflow-y` stays genuinely visible and the
+   * `view()` timelines keep resolving against the viewport.
+   *
+   * Both are declared: a browser without `clip` drops this line and keeps
+   * `hidden`. Neither is the fix for anything — an overflow that reaches here
+   * is a bug upstream, and this is only what keeps it from becoming a page you
+   * can shove sideways.
+   */
+  overflow-x: clip;
 }
 
 body {
@@ -182,6 +202,25 @@ img {
   margin-inline: auto;
   padding-inline: var(--gutter);
 }
+
+/*
+ * A note on the card grids that live in here, because the shape is repeated a
+ * dozen times across sections.css, pages.css and chrome.css and the reason for
+ * one part of it is not local to any of them.
+ *
+ * They are all `repeat(auto-fit, minmax(min(Nrem, 100%), 1fr))`, and the
+ * `min()` is the load-bearing half. `minmax(Nrem, 1fr)` reads as "at least
+ * Nrem", which is exactly what it does — including when the container is
+ * narrower than Nrem, where the track keeps its floor and the grid hangs out
+ * past the shell instead of the card getting narrower. The widest of these is
+ * 21rem, i.e. 336px, and a 375px phone leaves 335px inside the gutters: one
+ * pixel, and the whole page gains a horizontal scroll.
+ *
+ * `min(Nrem, 100%)` says the same thing up to the point where it stops being
+ * possible. Above Nrem it resolves to Nrem and the wrapping is unchanged;
+ * below, it resolves to the container and the track simply fits. On every
+ * viewport wide enough to have had an opinion, this changes nothing.
+ */
 
 /** Small label above a heading. */
 .eyebrow {

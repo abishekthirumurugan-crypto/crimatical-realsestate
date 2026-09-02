@@ -80,7 +80,7 @@
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
   gap: 1rem;
 }
 
@@ -122,7 +122,7 @@
 
 .split {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr));
   gap: clamp(1.75rem, 4vw, 3.5rem);
   align-items: center;
 }
@@ -192,7 +192,7 @@
 
 .spec {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(21rem, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -564,7 +564,7 @@
 
 .units {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -612,6 +612,47 @@
   background: var(--bg);
   /* The plan inherits this as its stroke. */
   color: var(--dark);
+  /* Nothing drawn in here may leave the card. The rule below is what stops the
+     plan wanting to, but a diagram is the kind of thing that gets edited later
+     and this is the cheap guarantee that an edit cannot reach the layout. */
+  overflow: hidden;
+}
+
+/*
+ * The plan fills its box and is not allowed to ask for a wider one.
+ *
+ * `min-width` is the whole rule; the rest only restates the attributes so the
+ * sizing lives in one place. An SVG is a replaced element with an intrinsic
+ * ratio, so as a flex item with `min-width: auto` its automatic minimum is the
+ * TRANSFERRED size — its definite height times 200/130 — rather than zero. That
+ * minimum is a real min-content contribution: it walks up through `.unit` into
+ * the `minmax(18rem, 1fr)` track of `.units` and sets a floor the track has to
+ * meet, so the card grows instead of the drawing shrinking.
+ *
+ * And the height it is transferred from is itself derived from the width, via
+ * `aspect-ratio` on the parent — a loop, which is why the result was not merely
+ * a little too wide. Measured on an iPhone: a card ~460px across inside a 350px
+ * column, ~70px of document past the viewport, and Safari shrink-to-fitting the
+ * whole page to about 0.81 to show it — the plan's dashed terrace and the
+ * "N left" pill left hanging outside the card, which is the visible symptom.
+ *
+ * Zero breaks the loop. The box is still exactly the content box, and
+ * `preserveAspectRatio` centres the drawing in it as before.
+ */
+.unit__plan > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  /* No-ops wherever the two percentages above resolve, which is everywhere the
+     parent's `aspect-ratio` gives it a definite height. They are here for the
+     engine that decides that height is indefinite, resolves `height: 100%` to
+     `auto`, and hands a replaced element with a 200/130 ratio a box taller than
+     the one it was given — the case `overflow: hidden` would otherwise have to
+     crop. Capped instead, `preserveAspectRatio` just letterboxes as usual. */
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .unit__left {
@@ -784,7 +825,7 @@ button.unit__cta {
 
 .services {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
   gap: 1.25rem;
 }
 
@@ -867,7 +908,7 @@ button.unit__cta {
 
 .testimonials {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
   gap: 1.25rem;
 }
 

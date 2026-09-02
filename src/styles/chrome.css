@@ -390,7 +390,7 @@
 
 .site-footer__links {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
   gap: 2rem;
   align-content: start;
 }
@@ -423,7 +423,7 @@
 
 .site-footer__details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
   gap: 2.5rem;
   padding-block: clamp(2.25rem, 4vw, 3rem);
   border-bottom: 1px solid var(--border-invert);
